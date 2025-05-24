@@ -8,6 +8,8 @@
 #include<fstream>
 #include "RtMidi.h"
 
+extern RtMidiOut midiOut;
+
 struct TimedMessage {
     int timestamp;  // 优先级依据
     std::vector<unsigned char> message;  // 实际数据
@@ -210,33 +212,18 @@ public:
         }
         return NULL;
     }
+    void clear() {
+        for (auto& note : notes) {
+            delete note;
+        }
+        notes.clear();
+    }
 };
 class Score {
     std::vector<Track> tracks;
-    RtMidiOut midiOut;
     int bpm;
-
-    unsigned int chooseMidiPort(RtMidiOut& midiOut) {
-        // 获取midi端口数量,设备相关
-        unsigned int ports = midiOut.getPortCount();
-        if (ports == 0) {
-            throw std::runtime_error("没有可用的MIDI输出端口");
-        }
-
-        return 0; // 默认选择第一个端口
-    }
 public:
-    Score(int bpm=120):bpm(bpm) {
-        // 初始化MIDI输出
-        try {
-            unsigned int port = chooseMidiPort(midiOut);
-            midiOut.openPort(port);
-        }
-        catch (RtMidiError& error) {
-            error.printMessage();
-            throw;
-        }
-    }
+    Score(int bpm=120):bpm(bpm){}
 
     void addTrack(Track track) {
         tracks.push_back(std::move(track));
@@ -268,3 +255,7 @@ public:
         }
     }
 };
+
+extern Track Metronome;//节拍器
+void setMetronome(int n, int m);//n分音符为1拍，每小节m拍
+void playMetronome(int bpm);//循环播放节拍器

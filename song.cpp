@@ -1,6 +1,25 @@
 #include "song.h"
 #include <windows.h>
 #include <mmsystem.h> // timeBeginPeriod 需要
+
+RtMidiOut midiOut;
+
+Track Metronome(0,9);
+
+void setMetronome(int n,int m) {//n分音符为1拍，每小节m拍,设置节拍器
+	Metronome.clear();
+	double duration = 4.0 / n;
+	Metronome.addNote(new Note(75, duration));
+	for (int i = 0; i < m - 1; i++) {
+		Metronome.addNote(new Note(76, duration));
+	}
+}
+void playMetronome(int bpm) {
+	while (1) {
+		Metronome.play(midiOut, bpm);
+	}
+}
+
 int MidiNote::noteNameToMidi(const std::string& name) {
 	int pitch = 12;//C0
 	char c = name[0];
