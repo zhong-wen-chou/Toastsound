@@ -1,63 +1,45 @@
-// scoreeditor.cpp
 #include "scoreeditor.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
 
 ScoreEditor::ScoreEditor(QWidget *parent) : QMainWindow(parent)
 {
-    setWindowTitle("编曲界面");
-    setMinimumSize(800, 600);
+    setWindowTitle("钢琴键盘");
+    setMinimumSize(1200, 300);
 
-    // 创建中央部件和主布局
+    // 创建中央部件和布局
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
-    // 创建数字谱编辑器
-    scoreTextEdit = new QTextEdit(this);
-    scoreTextEdit->setPlaceholderText("请在此输入数字乐谱...");
-    scoreTextEdit->setFont(QFont("Courier New", 12));
-    scoreTextEdit->setMinimumHeight(400);
-    mainLayout->addWidget(scoreTextEdit);
+    // 添加钢琴键组件
+    pianoKeys = new PianoKeys(centralWidget);
+    mainLayout->addWidget(pianoKeys, 1);
 
-    // 创建按钮布局
     QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->setSpacing(20);
+    buttonLayout->setContentsMargins(0, 20, 0, 20);
+    buttonLayout->setSpacing(15);
 
-    // 创建控制按钮
-    playButton = new QPushButton("播放", this);
-    pauseButton = new QPushButton("暂停", this);
-    saveButton = new QPushButton("保存", this);
+    QPushButton *playButton = new QPushButton("播放", this);
+    QPushButton *pauseButton = new QPushButton("暂停", this);
+    QPushButton *saveButton = new QPushButton("保存", this);
     exitButton = new QPushButton("退出", this);
+    exitButton->setStyleSheet("background-color: #FF4444; color: white;");
 
-    // 设置按钮样式
-    QList<QPushButton*> buttons = {playButton, pauseButton, saveButton, exitButton};
-    for (auto button : buttons) {
-        button->setMinimumSize(120, 40);
-        button->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #165DFF;"
-            "    color: white;"
-            "    border-radius: 8px;"
-            "    font-size: 14px;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #0E42B3;"
-            "}"
-            );
-        buttonLayout->addWidget(button);
-    }
+    buttonLayout->addWidget(playButton);
+    buttonLayout->addWidget(pauseButton);
+    buttonLayout->addWidget(saveButton);
+    buttonLayout->addWidget(exitButton);
 
     mainLayout->addLayout(buttonLayout);
+
+
     setCentralWidget(centralWidget);
 
-    // 连接退出按钮信号到槽
-    connect(exitButton, &QPushButton::clicked, this, &ScoreEditor::onExitClicked);
+    // 连接退出按钮
+    connect(exitButton, &QPushButton::clicked, this, &ScoreEditor::exitRequested);
 }
 
-ScoreEditor::~ScoreEditor()
-{
-    // 自动释放子控件
-}
 
-void ScoreEditor::onExitClicked()
-{
-    emit exitRequested(); // 发出退出请求信号
-}
+
+ScoreEditor::~ScoreEditor() {}

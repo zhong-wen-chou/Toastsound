@@ -1,33 +1,25 @@
-// scoreeditor.h
 #ifndef SCOREEDITOR_H
 #define SCOREEDITOR_H
 
 #include <QMainWindow>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QWidget>
+#include "pianokeys.h" // 添加钢琴键头文件
 
 class ScoreEditor : public QMainWindow
 {
     Q_OBJECT
+
 public:
     explicit ScoreEditor(QWidget *parent = nullptr);
     ~ScoreEditor();
 
 signals:
-    void exitRequested(); // 退出信号，用于返回主界面
-
-private slots:
-    void onExitClicked(); // 处理退出按钮点击
+    void exitRequested();
 
 private:
-    QTextEdit *scoreTextEdit; // 数字谱编辑器
-    QPushButton *playButton;  // 播放按钮
-    QPushButton *pauseButton; // 暂停按钮
-    QPushButton *saveButton;  // 保存按钮
-    QPushButton *exitButton;  // 退出按钮
+    PianoKeys *pianoKeys = nullptr; // 钢琴键组件
+    QPushButton *exitButton = nullptr; // 退出按钮
+
+    void createButtonLayout(); // 创建按钮布局
 };
 
 #endif // SCOREEDITOR_H
