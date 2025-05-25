@@ -104,38 +104,38 @@ void PianoKeys::initKeyMap()
 {
     keyMap.clear(); // 清空映射表
 
-    // 第一八度：C4-B4（白键索引0-6，黑键索引28-32）
+    // 第一八度：C4-B4（白键索引7-13，黑键索引33-37）
     keyMap = {
               // 白键
-              {Qt::Key_A, 0},    {Qt::Key_S, 1},    {Qt::Key_D, 2},    {Qt::Key_F, 3},
-              {Qt::Key_G, 4},    {Qt::Key_H, 5},    {Qt::Key_J, 6},
+              {Qt::Key_A, 7},    {Qt::Key_S, 8},    {Qt::Key_D, 9},    {Qt::Key_F, 10},
+              {Qt::Key_G, 11},    {Qt::Key_H, 12},    {Qt::Key_J, 13},
               // 黑键（C#1, D#1, F#1, G#1, A#1）
-              {Qt::Key_W, 28},   {Qt::Key_E, 29},   {Qt::Key_R, 30},   {Qt::Key_T, 31},
-              {Qt::Key_Y, 32},
+              {Qt::Key_W, 33},   {Qt::Key_E, 34},   {Qt::Key_R, 35},   {Qt::Key_T, 36},
+              {Qt::Key_Y, 37},
               };
 
-    // 第二八度：C5-B5（白键索引7-13，黑键索引33-37）
+    // 第二八度：C5-B5（白键索引14-20，黑键索引38-42）
     keyMap.insert({
-        {Qt::Key_K, 7},    {Qt::Key_L, 8},    {Qt::Key_Semicolon, 9}, {Qt::Key_Apostrophe, 10},
-        {Qt::Key_Z, 11},   {Qt::Key_X, 12},   {Qt::Key_C, 13},
-        {Qt::Key_U, 33},   {Qt::Key_O, 34},   {Qt::Key_P, 35},   {Qt::Key_BracketLeft, 36},
-        {Qt::Key_BracketRight, 37}, // 右方括号键
+        {Qt::Key_K, 14},    {Qt::Key_L, 15},    {Qt::Key_Semicolon, 16}, {Qt::Key_Apostrophe, 17},
+        {Qt::Key_Z, 18},   {Qt::Key_X, 19},   {Qt::Key_C, 20},
+        {Qt::Key_U, 38},   {Qt::Key_O, 39},   {Qt::Key_P, 40},   {Qt::Key_BracketLeft, 41},
+        {Qt::Key_BracketRight, 42}, // 右方括号键
     });
 
-    // 第三八度：C6-B6（白键索引14-20，黑键索引38-42）
+    // 第三八度：C6-B6（白键索引21-27，黑键索引43-47）
     keyMap.insert({
-                   {Qt::Key_V, 14},   {Qt::Key_B, 15},   {Qt::Key_N, 16},   {Qt::Key_M, 17},
-                   {Qt::Key_Comma, 18}, {Qt::Key_Period, 19}, {Qt::Key_Slash, 20},
-                   {Qt::Key_2, 38},   {Qt::Key_3, 39},   {Qt::Key_5, 40},   {Qt::Key_6, 41},
-                   {Qt::Key_7, 42},
+                   {Qt::Key_V, 21},   {Qt::Key_B, 22},   {Qt::Key_N, 23},   {Qt::Key_M, 24},
+                   {Qt::Key_Comma, 25}, {Qt::Key_Period, 26}, {Qt::Key_Slash, 27},
+                   {Qt::Key_2, 43},   {Qt::Key_3, 44},   {Qt::Key_5, 45},   {Qt::Key_6, 46},
+                   {Qt::Key_7, 47},
                    });
 
-    // 第四八度：C3-B3（白键索引21-27，黑键索引43-47）
+    // 第四八度：C3-B3（白键索引0-6，黑键索引28-32）
     keyMap.insert({
-                   {Qt::Key_4, 21},   {Qt::Key_5, 22},   {Qt::Key_6, 23},   {Qt::Key_7, 24},
-                   {Qt::Key_8, 25},   {Qt::Key_9, 26},   {Qt::Key_0, 27},
-                   {Qt::Key_Minus, 43}, {Qt::Key_Equal, 44}, {Qt::Key_BracketRight, 45},
-                   {Qt::Key_Slash, 46}, {Qt::Key_Colon, 47},
+                   {Qt::Key_4, 0},   {Qt::Key_5, 1},   {Qt::Key_6, 2},   {Qt::Key_7, 3},
+                   {Qt::Key_8, 4},   {Qt::Key_9, 5},   {Qt::Key_0, 6},
+                   {Qt::Key_Minus, 28}, {Qt::Key_Equal, 29}, {Qt::Key_BracketRight, 30},
+                   {Qt::Key_Slash, 31}, {Qt::Key_Colon, 32},
                    });
 }
 void PianoKeys::initKeytoname()
@@ -168,14 +168,14 @@ void PianoKeys::initKeytoname()
         { Qt::Key_V, "c6" }, { Qt::Key_B, "d6" }, { Qt::Key_N, "e6" }, { Qt::Key_M, "f6" },
         { Qt::Key_Comma, "g6" }, { Qt::Key_Period, "a6" }, { Qt::Key_Slash, "b6" },
         // 黑键（C#6, D#6, F#6, G#6, A#6）
-        { Qt::Key_2, "c6s" }, { Qt::Key_3, "d6s" }, { Qt::Key_6, "f6s" }, { Qt::Key_6, "g6s" },
+        { Qt::Key_2, "c6s" }, { Qt::Key_3, "d6s" }, { Qt::Key_4, "f6s" }, { Qt::Key_5, "g6s" },
         { Qt::Key_7, "a6s" },
                    });
 
     // 第四八度：C3-B3（白键索引21-27，黑键索引43-47）
     keytoname.insert({
         // 白键
-        { Qt::Key_4, "c3" }, { Qt::Key_5, "d3" }, { Qt::Key_3, "e3" }, { Qt::Key_7, "f3" },
+        { Qt::Key_4, "c3" }, { Qt::Key_5, "d3" }, { Qt::Key_6, "e3" }, { Qt::Key_7, "f3" },
         { Qt::Key_8, "g3" }, { Qt::Key_9, "a3" }, { Qt::Key_0, "b3" },
         // 黑键（C#3, D#3, F#3, G#3, A#3）
         { Qt::Key_Minus, "c3s" }, { Qt::Key_Equal, "d3s" }, { Qt::Key_BracketRight, "f3s" },
