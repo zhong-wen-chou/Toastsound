@@ -25,10 +25,13 @@ private:
     std::function<void(int)> keyCallback; // 按键回调函数
 
     void initKeyMap();
-
     void createKeys();           // 创建琴键
     void setupLayout();          // 布局管理
     void updateKeyVisual(int keyIndex, bool isPressed); // 更新琴键视觉状态
+
+
+    void createBlackKey(int whiteIndex, int octave, int blackKeyWidth, int blackKeyHeight, int blackKeyYOffset); // 新增函数声明
+    int whiteKeyWidth = 0;
 };
 
 #endif // PIANOKEYS_H

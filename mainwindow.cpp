@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-
+#include "loadwindow.h"
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -106,9 +106,8 @@ void MainWindow::connectSignals()
     connect(composeButton, &QPushButton::clicked, this, &MainWindow::onComposeButtonClicked);
 
 
-    connect(loadButton, &QPushButton::clicked, []() {
-        qDebug() << "读取按钮被点击";
-    });
+    connect(loadButton, &QPushButton::clicked, this, &MainWindow::onLoadButtonClicked);
+
 
     connect(helpButton, &QPushButton::clicked, []() {
         qDebug() << "帮助按钮被点击";
@@ -129,4 +128,17 @@ void MainWindow::onComposeButtonClicked()
     }
 
     scoreEditor->show();
+}
+
+void MainWindow::onLoadButtonClicked()
+{
+    qDebug() << "跳转到读取界面";
+    hide();
+
+    if (!loadWindow) {
+        loadWindow = new LoadWindow(this);
+        connect(loadWindow, &LoadWindow::destroyed, this, &MainWindow::show); // 返回时显示主窗口
+    }
+
+    loadWindow->show();
 }

@@ -28,10 +28,15 @@ PianoKeys::PianoKeys(QWidget *parent) : QWidget(parent)
 
 void PianoKeys::createKeys()
 {
-    // 创建白键（C1到C5，共28个）
+    whiteKeyWidth = 1200 / (OCTAVE_WHITE_KEYS * OCTAVE_COUNT);
+    int blackKeyWidth = whiteKeyWidth * (BLACK_KEY_WIDTH / (float)WHITE_KEY_WIDTH);
+    int blackKeyHeight = KEY_HEIGHT; // 黑键高度与白键一致
+    int blackKeyYOffset = KEY_HEIGHT - blackKeyHeight; // 黑键顶部偏移量，实现下端重合
+
+    // 创建白键
     for (int i = 0; i < OCTAVE_WHITE_KEYS * OCTAVE_COUNT; ++i) {
         QPushButton *key = new QPushButton(this);
-        key->setFixedSize(WHITE_KEY_WIDTH, KEY_HEIGHT);
+        key->setFixedSize(whiteKeyWidth, KEY_HEIGHT);
         key->setStyleSheet("QPushButton { background: white; border: 1px solid #333; }"
                            "QPushButton:pressed { background: #f0f0f0; }");
         whiteKeys.append(key);
@@ -40,54 +45,43 @@ void PianoKeys::createKeys()
     // 创建黑键（每组5个，共4组）
     int blackKeyIndex = 0;
     for (int octave = 0; octave < OCTAVE_COUNT; ++octave) {
-        // 两黑一组的黑键
+        // 两黑一组的黑键（C#、D#）
         int whiteIndex = octave * OCTAVE_WHITE_KEYS + 1;
-        QPushButton *key = new QPushButton(this);
-        key->setFixedSize(BLACK_KEY_WIDTH, KEY_HEIGHT * 0.6);
-        key->move(whiteIndex * WHITE_KEY_WIDTH + BLACK_KEY_WIDTH/2, 0);
-        key->setStyleSheet("QPushButton { background: black; border: none; }"
-                           "QPushButton:pressed { background: #333; }");
-        blackKeys.append(key);
+        createBlackKey(whiteIndex, octave, blackKeyWidth, blackKeyHeight, blackKeyYOffset);
         blackKeyIndex++;
 
-        whiteIndex = octave * OCTAVE_WHITE_KEYS + 3;
-        key = new QPushButton(this);
-        key->setFixedSize(BLACK_KEY_WIDTH, KEY_HEIGHT * 0.6);
-        key->move(whiteIndex * WHITE_KEY_WIDTH + BLACK_KEY_WIDTH/2, 0);
-        key->setStyleSheet("QPushButton { background: black; border: none; }"
-                           "QPushButton:pressed { background: #333; }");
-        blackKeys.append(key);
+        whiteIndex = octave * OCTAVE_WHITE_KEYS + 2; // 原代码此处为+3，修正为+2（两黑组应为C#1和D#1，对应白键1和2之间）
+        createBlackKey(whiteIndex, octave, blackKeyWidth, blackKeyHeight, blackKeyYOffset);
         blackKeyIndex++;
 
-        // 三黑一组的黑键
+        // 三黑一组的黑键（F#、G#、A#）
+        whiteIndex = octave * OCTAVE_WHITE_KEYS + 4;
+        createBlackKey(whiteIndex, octave, blackKeyWidth, blackKeyHeight, blackKeyYOffset);
+        blackKeyIndex++;
+
         whiteIndex = octave * OCTAVE_WHITE_KEYS + 5;
-        key = new QPushButton(this);
-        key->setFixedSize(BLACK_KEY_WIDTH, KEY_HEIGHT * 0.6);
-        key->move(whiteIndex * WHITE_KEY_WIDTH + BLACK_KEY_WIDTH/2, 0);
-        key->setStyleSheet("QPushButton { background: black; border: none; }"
-                           "QPushButton:pressed { background: #333; }");
-        blackKeys.append(key);
+        createBlackKey(whiteIndex, octave, blackKeyWidth, blackKeyHeight, blackKeyYOffset);
         blackKeyIndex++;
 
         whiteIndex = octave * OCTAVE_WHITE_KEYS + 6;
-        key = new QPushButton(this);
-        key->setFixedSize(BLACK_KEY_WIDTH, KEY_HEIGHT * 0.6);
-        key->move(whiteIndex * WHITE_KEY_WIDTH + BLACK_KEY_WIDTH/2, 0);
-        key->setStyleSheet("QPushButton { background: black; border: none; }"
-                           "QPushButton:pressed { background: #333; }");
-        blackKeys.append(key);
-        blackKeyIndex++;
-
-        whiteIndex = (octave + 1) * OCTAVE_WHITE_KEYS;
-        key = new QPushButton(this);
-        key->setFixedSize(BLACK_KEY_WIDTH, KEY_HEIGHT * 0.6);
-        key->move(whiteIndex * WHITE_KEY_WIDTH + BLACK_KEY_WIDTH/2, 0);
-        key->setStyleSheet("QPushButton { background: black; border: none; }"
-                           "QPushButton:pressed { background: #333; }");
-        blackKeys.append(key);
+        createBlackKey(whiteIndex, octave, blackKeyWidth, blackKeyHeight, blackKeyYOffset);
         blackKeyIndex++;
     }
 }
+
+// 新增辅助函数创建黑键
+void PianoKeys::createBlackKey(int whiteIndex, int octave, int blackKeyWidth, int blackKeyHeight, int blackKeyYOffset) {
+    QPushButton *key = new QPushButton(this);
+    key->setFixedSize(blackKeyWidth, blackKeyHeight);
+    key->move(
+        whiteIndex * whiteKeyWidth + (whiteKeyWidth - blackKeyWidth) / 2, // 水平居中
+        blackKeyYOffset // 垂直偏移，使黑键下端与白键上端重合
+        );
+    key->setStyleSheet("QPushButton { background: black; border: none; }"
+                       "QPushButton:pressed { background: #333; }");
+    blackKeys.append(key);
+}
+
 
 void PianoKeys::setupLayout()
 {
@@ -169,7 +163,7 @@ void PianoKeys::updateKeyVisual(int keyIndex, bool isPressed)
         QPushButton *key = whiteKeys[keyIndex];
         key->setDown(isPressed);
     } else {
-        // 黑键处理（假设黑键索引从21开始，需根据实际数量调整）
+        // 黑键处理
         int blackIndex = keyIndex - whiteKeys.size();
         if (blackIndex >= 0 && blackIndex < blackKeys.size()) {
             QPushButton *key = blackKeys[blackIndex];

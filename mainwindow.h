@@ -6,7 +6,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include "scoreeditor.h"
-
+#include "loadwindow.h"
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -17,6 +17,7 @@ public:
 
 private slots:
     void onComposeButtonClicked();
+    void onLoadButtonClicked();
 
 private:
     void createWidgets();
@@ -31,6 +32,8 @@ private:
     QPushButton *helpButton = nullptr;
     QLabel *versionLabel = nullptr;
     ScoreEditor *scoreEditor = nullptr;
+
+    LoadWindow *loadWindow = nullptr;
 };
 
 #endif // MAINWINDOW_H
