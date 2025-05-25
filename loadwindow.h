@@ -19,6 +19,7 @@ public:
 private slots:
     void onReturnToMain(); // 返回主界面
     void showVolumeControl(); // 显示音量控制
+    void selectAudio();
 
 private:
     void createWidgets(); // 创建控件
