@@ -82,26 +82,9 @@ class Note : public MidiNote {
     int velocity; // 力度 (0-127)，暂时没写修改力度的功能
     void output(std::ostream& os)const;
     void input(std::istream& is);
-    unsigned int chooseMidiPort(RtMidiOut& midiOut) {
-        // 获取midi端口数量,设备相关
-        unsigned int ports = midiOut.getPortCount();
-        if (ports == 0) {
-            throw std::runtime_error("没有可用的MIDI输出端口");
-        }
-
-        return 0; // 默认选择第一个端口
-    }
 public:
     Note(int pitch = 60, double duration = 1.0, int velocity = 90)
         : MidiNote(pitch, duration), velocity(velocity) {
-        try {
-            unsigned int port = chooseMidiPort(midiOut);
-            midiOut.openPort(port);
-        }
-        catch (RtMidiError& error) {
-            error.printMessage();
-            throw;
-        }
     }
 
     void play(RtMidiOut& midiOut, int bpm, int channel = 0) override;
@@ -115,7 +98,7 @@ public:
     void setvelocity(int n) {
         velocity = n;
     }
-    void NoteOn(RtMidiOut& midiOut, int bpm, int channel = 0) {
+    void NoteOn(RtMidiOut& midiOut,int channel = 0) {
         std::vector<unsigned char> message = {
             static_cast<unsigned char>(0x90 | channel), // Note On + 通道
             static_cast<unsigned char>(pitch),          // 音高 (0-127)
@@ -123,7 +106,7 @@ public:
         };
         midiOut.sendMessage(&message);
     }
-    void NoteOff(RtMidiOut& midiOut, int bpm, int channel = 0) {
+    void NoteOff(RtMidiOut& midiOut,int channel = 0) {
         std::vector<unsigned char> message = {
             static_cast<unsigned char>(0x80 | channel), // Note Off + 通道
             static_cast<unsigned char>(pitch),          // 音高 (0-127)

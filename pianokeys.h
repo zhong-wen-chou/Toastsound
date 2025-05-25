@@ -22,9 +22,11 @@ private:
     QList<QPushButton*> whiteKeys;  // 28个白键列表
     QList<QPushButton*> blackKeys;  // 20个黑键列表
     QMap<QKeySequence, int> keyMap; // 键盘按键到琴键的映射
+    QMap<QKeySequence,std::string>keytoname;//键盘按键到音名的映射
     std::function<void(int)> keyCallback; // 按键回调函数
 
     void initKeyMap();
+    void initKeytoname();
     void createKeys();           // 创建琴键
     void setupLayout();          // 布局管理
     void updateKeyVisual(int keyIndex, bool isPressed); // 更新琴键视觉状态
