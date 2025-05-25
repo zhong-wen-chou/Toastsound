@@ -1,361 +1,361 @@
 #include "song.h"
 #include <windows.h>
-#include <mmsystem.h> // timeBeginPeriod ĞèÒª
+#include <mmsystem.h> // timeBeginPeriod éœ€è¦
 
 RtMidiOut midiOut;
 
 Track Metronome(0,9);
 
-void setMetronome(int n,int m) {//n·ÖÒô·ûÎª1ÅÄ£¬Ã¿Ğ¡½ÚmÅÄ,ÉèÖÃ½ÚÅÄÆ÷
-	Metronome.clear();
-	double duration = 4.0 / n;
-	Metronome.addNote(new Note(75, duration));
-	for (int i = 0; i < m - 1; i++) {
-		Metronome.addNote(new Note(76, duration));
-	}
+void setMetronome(int n,int m) {//nåˆ†éŸ³ç¬¦ä¸º1æ‹ï¼Œæ¯å°èŠ‚mæ‹,è®¾ç½®èŠ‚æ‹å™¨
+    Metronome.clear();
+    double duration = 4.0 / n;
+    Metronome.addNote(new Note(75, duration));
+    for (int i = 0; i < m - 1; i++) {
+        Metronome.addNote(new Note(76, duration));
+    }
 }
 void playMetronome(int bpm) {
-	while (1) {
-		Metronome.play(midiOut, bpm);
-	}
+    while (1) {
+        Metronome.play(midiOut, bpm);
+    }
 }
 
 int MidiNote::noteNameToMidi(const std::string& name) {
-	int pitch = 12;//C0
-	char c = name[0];
-	int octave = name[1] - '0';
-	int bia = 0;
-	if (name.size() == 3) {
-		if (name[2] == 's') {//sharpÉıµ÷
-			bia = 1;
-		}
-		else if (name[2] == 'f') {//flat½µµ÷
-			bia = -1;
-		}
-	}
-	if (c == 'c' || c == 'C') {
-		pitch += 0;
-	}
-	else if(c=='d'||c=='D') {
-		pitch += 2;
-	}
-	else if (c == 'e' || c == 'E') {
-		pitch += 4;
-	}
-	else if (c == 'f' || c == 'F') {
-		pitch += 5;
-	}
-	else if (c == 'g' || c == 'G') {
-		pitch += 7;
-	}
-	else if (c == 'a' || c == 'A') {
-		pitch += 9;
-	}
-	else if (c == 'b' || c == 'B') {
-		pitch += 11;
-	}
-	pitch += 12 * octave+bia;
-	return pitch;
+    int pitch = 12;//C0
+    char c = name[0];
+    int octave = name[1] - '0';
+    int bia = 0;
+    if (name.size() == 3) {
+        if (name[2] == 's') {//sharpå‡è°ƒ
+            bia = 1;
+        }
+        else if (name[2] == 'f') {//flaté™è°ƒ
+            bia = -1;
+        }
+    }
+    if (c == 'c' || c == 'C') {
+        pitch += 0;
+    }
+    else if(c=='d'||c=='D') {
+        pitch += 2;
+    }
+    else if (c == 'e' || c == 'E') {
+        pitch += 4;
+    }
+    else if (c == 'f' || c == 'F') {
+        pitch += 5;
+    }
+    else if (c == 'g' || c == 'G') {
+        pitch += 7;
+    }
+    else if (c == 'a' || c == 'A') {
+        pitch += 9;
+    }
+    else if (c == 'b' || c == 'B') {
+        pitch += 11;
+    }
+    pitch += 12 * octave+bia;
+    return pitch;
 }
 std::string MidiNote::MidiTonoteName()const {
-	int octave = pitch / 12 - 1;
-	int p = pitch % 12;
-	char name = 'C';
-	char oct = octave + '0';
-	int delta=(p+int(p>=3)+int(p>=7))/2;
-	name += delta;
-	if (name >= 'H') {
-		name -= 7;
-	}
-	std::string temp;
-	temp += name;
-	temp += oct;
-	if (p - 2 * delta + int(delta >= 3)!=0) {
-		if (p - 2 * delta + int(delta >= 3) == 1) {
-			temp += 's';
-		}
-		else {
-			temp += 'f';
-		}
-	}
-	return temp;
+    int octave = pitch / 12 - 1;
+    int p = pitch % 12;
+    char name = 'C';
+    char oct = octave + '0';
+    int delta=(p+int(p>=3)+int(p>=7))/2;
+    name += delta;
+    if (name >= 'H') {
+        name -= 7;
+    }
+    std::string temp;
+    temp += name;
+    temp += oct;
+    if (p - 2 * delta + int(delta >= 3)!=0) {
+        if (p - 2 * delta + int(delta >= 3) == 1) {
+            temp += 's';
+        }
+        else {
+            temp += 'f';
+        }
+    }
+    return temp;
 }
 
 void Note::play(RtMidiOut& midiOut, int bpm, int channel) {
-	std::vector<unsigned char> message;
+    std::vector<unsigned char> message;
 
-	// Òô·û¿ª (0x90 = Note On, channel)
-	message.push_back(0x90 | channel);
-	message.push_back(pitch);
-	message.push_back(velocity);
-	midiOut.sendMessage(&message);
+    // éŸ³ç¬¦å¼€ (0x90 = Note On, channel)
+    message.push_back(0x90 | channel);
+    message.push_back(pitch);
+    message.push_back(velocity);
+    midiOut.sendMessage(&message);
 
-	// ¼ÆËã³ÖĞøÊ±¼ä(ºÁÃë)
-	int ms = (60000.0 / bpm) * duration; // ËÄ·ÖÒô·û = 60000/bpm ºÁÃë
+    // è®¡ç®—æŒç»­æ—¶é—´(æ¯«ç§’)
+    int ms = (60000.0 / bpm) * duration; // å››åˆ†éŸ³ç¬¦ = 60000/bpm æ¯«ç§’
 
-	//ÔİÍ£Ê±¼ä
-	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    //æš‚åœæ—¶é—´
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-	// Òô·û¹Ø
-	message[0] = 0x80 | channel; // 0x80 = Note Off
-	message[2] = 0; // Á¦¶ÈÎª0±íÊ¾Òô·û¹Ø
-	midiOut.sendMessage(&message);
+    // éŸ³ç¬¦å…³
+    message[0] = 0x80 | channel; // 0x80 = Note Off
+    message[2] = 0; // åŠ›åº¦ä¸º0è¡¨ç¤ºéŸ³ç¬¦å…³
+    midiOut.sendMessage(&message);
 }
 void MultiNote::play(RtMidiOut& midiOut, int bpm, int channel) {
-	std::vector<unsigned char> message;
+    std::vector<unsigned char> message;
 
-	// Òô·û¿ª (0x90 = Note On, channel)
-	message.push_back(0x90 | channel);
-	message.push_back(pitch);
-	message.push_back(velocity);
-	midiOut.sendMessage(&message);
-	// ·¢ËÍËùÓĞ Note On ÏûÏ¢£¨Ã¿¸öÒô·ûµ¥¶À·¢ËÍ£©
-	for (const auto& note : notes) {
-		std::vector<unsigned char> message;
-		message.push_back(0x90 | channel);  // Note On + Í¨µÀ
-		message.push_back(note.getpitch());  // Òô¸ß
-		message.push_back(note.getvelocity()); // Á¦¶È
-		midiOut.sendMessage(&message);
-	}
-	// ¼ÆËã³ÖĞøÊ±¼ä(ºÁÃë)
-	int ms = (60000.0 / bpm) * duration; // ËÄ·ÖÒô·û = 60000/bpm ºÁÃë
+    // éŸ³ç¬¦å¼€ (0x90 = Note On, channel)
+    message.push_back(0x90 | channel);
+    message.push_back(pitch);
+    message.push_back(velocity);
+    midiOut.sendMessage(&message);
+    // å‘é€æ‰€æœ‰ Note On æ¶ˆæ¯ï¼ˆæ¯ä¸ªéŸ³ç¬¦å•ç‹¬å‘é€ï¼‰
+    for (const auto& note : notes) {
+        std::vector<unsigned char> message;
+        message.push_back(0x90 | channel);  // Note On + é€šé“
+        message.push_back(note.getpitch());  // éŸ³é«˜
+        message.push_back(note.getvelocity()); // åŠ›åº¦
+        midiOut.sendMessage(&message);
+    }
+    // è®¡ç®—æŒç»­æ—¶é—´(æ¯«ç§’)
+    int ms = (60000.0 / bpm) * duration; // å››åˆ†éŸ³ç¬¦ = 60000/bpm æ¯«ç§’
 
-	//ÔİÍ£Ê±¼ä
-	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    //æš‚åœæ—¶é—´
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-	// Òô·û¹Ø
-	message[0] = 0x80 | channel; // 0x80 = Note Off
-	message[2] = 0; // Á¦¶ÈÎª0±íÊ¾Òô·û¹Ø
-	midiOut.sendMessage(&message);
-	for (const auto& note : notes) {
-		std::vector<unsigned char> message;
-		message.push_back(0x80 | channel);  // Note Off + Í¨µÀ
-		message.push_back(note.getpitch()); // Òô¸ß
-		message.push_back(0);               // Á¦¶È=0
-		midiOut.sendMessage(&message);
-	}
+    // éŸ³ç¬¦å…³
+    message[0] = 0x80 | channel; // 0x80 = Note Off
+    message[2] = 0; // åŠ›åº¦ä¸º0è¡¨ç¤ºéŸ³ç¬¦å…³
+    midiOut.sendMessage(&message);
+    for (const auto& note : notes) {
+        std::vector<unsigned char> message;
+        message.push_back(0x80 | channel);  // Note Off + é€šé“
+        message.push_back(note.getpitch()); // éŸ³é«˜
+        message.push_back(0);               // åŠ›åº¦=0
+        midiOut.sendMessage(&message);
+    }
 
 
 }
 void Track::play(RtMidiOut& midiOut, int bpm) {
-	// ÉèÖÃÒôÉ«
-	std::vector<unsigned char> programChange;
-	programChange.push_back(0xC0 | channel); // Program Change
-	programChange.push_back(program);
-	midiOut.sendMessage(&programChange);
+    // è®¾ç½®éŸ³è‰²
+    std::vector<unsigned char> programChange;
+    programChange.push_back(0xC0 | channel); // Program Change
+    programChange.push_back(program);
+    midiOut.sendMessage(&programChange);
 
-	// ²¥·ÅËùÓĞÒô·û
-	for (auto& note : notes) {
-		note->play(midiOut, bpm, channel);
-	}
+    // æ’­æ”¾æ‰€æœ‰éŸ³ç¬¦
+    for (auto& note : notes) {
+        note->play(midiOut, bpm, channel);
+    }
 }
 
 void Score::play() {
-	//´´½¨Ê±¼äÓÅÏÈĞòÁĞ£¬ÔªËØÎªrtmidiÏûÏ¢,ÓÅÏÈ¶ÈÎªÊ±¼ä
-	std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage> midimessages;
-	for (auto& track : tracks) {
-		track.inserttoqueue(midimessages, bpm);
-	}
+    //åˆ›å»ºæ—¶é—´ä¼˜å…ˆåºåˆ—ï¼Œå…ƒç´ ä¸ºrtmidiæ¶ˆæ¯,ä¼˜å…ˆåº¦ä¸ºæ—¶é—´
+    std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage> midimessages;
+    for (auto& track : tracks) {
+        track.inserttoqueue(midimessages, bpm);
+    }
 
-	timeBeginPeriod(1); // ÉèÖÃÎª 1ms ¾«¶È
-	//Í¨¹ıÊ±¼äÑ­»·½«ÓÅÏÈ¶ÓÁĞµÄÏûÏ¢´«¸ø²¥·ÅÆ÷
-	int currentTime = 0;
-	while (!midimessages.empty()) {
-		//µ¯³öÓÅÏÈ¶ÓÁĞµÄµÚÒ»¸öÔªËØ
-		TimedMessage msg = midimessages.top();
-		midimessages.pop();
-		// ¼ÆËãÑÓ³Ù
-		int delay = msg.timestamp - currentTime;
-		if (delay > 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-		}
-		// ·¢ËÍMIDIÏûÏ¢
-		midiOut.sendMessage(&msg.message);
-		currentTime =msg.timestamp;
-	}
-	timeEndPeriod(1); // »Ö¸´ÏµÍ³Ä¬ÈÏ¾«¶È
-	// ÔÚÑ­»·½áÊøºóÌí¼ÓÒÔ²¥·ÅÍêÕû×îºóÒ»¸öÒô
-	std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    timeBeginPeriod(1); // è®¾ç½®ä¸º 1ms ç²¾åº¦
+    //é€šè¿‡æ—¶é—´å¾ªç¯å°†ä¼˜å…ˆé˜Ÿåˆ—çš„æ¶ˆæ¯ä¼ ç»™æ’­æ”¾å™¨
+    int currentTime = 0;
+    while (!midimessages.empty()) {
+        //å¼¹å‡ºä¼˜å…ˆé˜Ÿåˆ—çš„ç¬¬ä¸€ä¸ªå…ƒç´ 
+        TimedMessage msg = midimessages.top();
+        midimessages.pop();
+        // è®¡ç®—å»¶è¿Ÿ
+        int delay = msg.timestamp - currentTime;
+        if (delay > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        }
+        // å‘é€MIDIæ¶ˆæ¯
+        midiOut.sendMessage(&msg.message);
+        currentTime =msg.timestamp;
+    }
+    timeEndPeriod(1); // æ¢å¤ç³»ç»Ÿé»˜è®¤ç²¾åº¦
+    // åœ¨å¾ªç¯ç»“æŸåæ·»åŠ ä»¥æ’­æ”¾å®Œæ•´æœ€åä¸€ä¸ªéŸ³
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 void Note::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t) {
-	std::vector<unsigned char> message;
+    std::vector<unsigned char> message;
 
-	// Òô·û¿ª (0x90 = Note On, channel)
-	message.push_back(0x90 | channel);
-	message.push_back(pitch);
-	message.push_back(velocity);
-	pq.push(TimedMessage(t, message));
+    // éŸ³ç¬¦å¼€ (0x90 = Note On, channel)
+    message.push_back(0x90 | channel);
+    message.push_back(pitch);
+    message.push_back(velocity);
+    pq.push(TimedMessage(t, message));
 
-	// ¼ÆËã³ÖĞøÊ±¼ä(ºÁÃë)
-	t += (60000.0 / bpm) * duration; // ËÄ·ÖÒô·û = 60000/bpm ºÁÃë
+    // è®¡ç®—æŒç»­æ—¶é—´(æ¯«ç§’)
+    t += (60000.0 / bpm) * duration; // å››åˆ†éŸ³ç¬¦ = 60000/bpm æ¯«ç§’
 
-	//Òô·û¹Ø
-	message[0] = 0x80 | channel; // 0x80 = Note Off
-	message[2] = 0; // Á¦¶ÈÎª0±íÊ¾Òô·û¹Ø
-	pq.push(TimedMessage(t, message));
+    //éŸ³ç¬¦å…³
+    message[0] = 0x80 | channel; // 0x80 = Note Off
+    message[2] = 0; // åŠ›åº¦ä¸º0è¡¨ç¤ºéŸ³ç¬¦å…³
+    pq.push(TimedMessage(t, message));
 }
 void MultiNote::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t) {
-	std::vector<unsigned char> message;
+    std::vector<unsigned char> message;
 
-	// Òô·û¿ª (0x90 = Note On, channel)
-	message.push_back(0x90 | channel);
-	message.push_back(pitch);
-	message.push_back(velocity);
-	pq.push(TimedMessage(t, message));
-	for (const auto& note : notes) {
-		std::vector<unsigned char> message;
-		message.push_back(0x90 | channel);  // Note On + Í¨µÀ
-		message.push_back(note.getpitch());  // Òô¸ß
-		message.push_back(note.getvelocity()); // Á¦¶È
-		pq.push(TimedMessage(t, message));
-	}
+    // éŸ³ç¬¦å¼€ (0x90 = Note On, channel)
+    message.push_back(0x90 | channel);
+    message.push_back(pitch);
+    message.push_back(velocity);
+    pq.push(TimedMessage(t, message));
+    for (const auto& note : notes) {
+        std::vector<unsigned char> message;
+        message.push_back(0x90 | channel);  // Note On + é€šé“
+        message.push_back(note.getpitch());  // éŸ³é«˜
+        message.push_back(note.getvelocity()); // åŠ›åº¦
+        pq.push(TimedMessage(t, message));
+    }
 
-	// ¼ÆËã³ÖĞøÊ±¼ä(ºÁÃë)
-	t += (60000.0 / bpm) * duration; // ËÄ·ÖÒô·û = 60000/bpm ºÁÃë
-	//Òô·û¹Ø
-	message[0] = 0x80 | channel; // 0x80 = Note Off
-	message[2] = 0; // Á¦¶ÈÎª0±íÊ¾Òô·û¹Ø
-	pq.push(TimedMessage(t, message));
-	for (const auto& note : notes) {
-		std::vector<unsigned char> message;
-		message.push_back(0x80 | channel);  // Note Off + Í¨µÀ
-		message.push_back(note.getpitch()); // Òô¸ß
-		message.push_back(0);               // Á¦¶È=0
-		pq.push(TimedMessage(t, message));
-	}
+    // è®¡ç®—æŒç»­æ—¶é—´(æ¯«ç§’)
+    t += (60000.0 / bpm) * duration; // å››åˆ†éŸ³ç¬¦ = 60000/bpm æ¯«ç§’
+    //éŸ³ç¬¦å…³
+    message[0] = 0x80 | channel; // 0x80 = Note Off
+    message[2] = 0; // åŠ›åº¦ä¸º0è¡¨ç¤ºéŸ³ç¬¦å…³
+    pq.push(TimedMessage(t, message));
+    for (const auto& note : notes) {
+        std::vector<unsigned char> message;
+        message.push_back(0x80 | channel);  // Note Off + é€šé“
+        message.push_back(note.getpitch()); // éŸ³é«˜
+        message.push_back(0);               // åŠ›åº¦=0
+        pq.push(TimedMessage(t, message));
+    }
 }
 void Track::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm) {
-	// ÉèÖÃÒôÉ«
-	std::vector<unsigned char> programChange;
-	programChange.push_back(0xC0 | channel); // Program Change
-	programChange.push_back(program);
-	pq.push(TimedMessage(0, programChange));
-	int t = 0;
-	for (auto& note : notes) {
-		note->inserttoqueue(pq, bpm, channel, t);
-	}
+    // è®¾ç½®éŸ³è‰²
+    std::vector<unsigned char> programChange;
+    programChange.push_back(0xC0 | channel); // Program Change
+    programChange.push_back(program);
+    pq.push(TimedMessage(0, programChange));
+    int t = 0;
+    for (auto& note : notes) {
+        note->inserttoqueue(pq, bpm, channel, t);
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const Score& a) {
-	os << a.bpm<<'\n';
-	os << a.tracks.size()<<'\n';
-	for (auto& track : a.tracks) {
-		os<<track<<'\n';
-	}
-	return os;
+    os << a.bpm<<'\n';
+    os << a.tracks.size()<<'\n';
+    for (auto& track : a.tracks) {
+        os<<track<<'\n';
+    }
+    return os;
 }
 std::istream& operator>>(std::istream& is, Score& a) {
-	is >> a.bpm;
-	int n;
-	is >> n;
-	Track temp;
-	for (int i = 0; i < n; i++) {
-		is >> temp;
-		a.addTrack(std::move(temp));
-	}
-	return is;
+    is >> a.bpm;
+    int n;
+    is >> n;
+    Track temp;
+    for (int i = 0; i < n; i++) {
+        is >> temp;
+        a.addTrack(std::move(temp));
+    }
+    return is;
 }
 std::ostream& operator<<(std::ostream& os, const Track& a) {
-	os << a.channel<<'\n'<<a.program<<'\n'<<a.notes.size()<<'\n';
-	for (auto& note : a.notes) {
-		os << *note<<'\n';
-	}
-	return os;
+    os << a.channel<<'\n'<<a.program<<'\n'<<a.notes.size()<<'\n';
+    for (auto& note : a.notes) {
+        os << *note<<'\n';
+    }
+    return os;
 }
 std::istream& operator>>(std::istream& is, Track& a) {
-	is >> a.channel >> a.program;
-	int n;
-	is >> n;
-	MidiNote* temp=NULL;
-	char c;
-	for (int i = 0; i < n; i++) {
-		is >> c;
-		switch (c)
-		{
-		case 'n':
-			temp = new Note;
-			is >> *temp;
-			break;
-		case 'r':
-			temp = new Rest;
-			is >> *temp;
-			break;
-		case 'm':
-			temp = new MultiNote;
-			is >> *temp;
-			break;
-		default:
-			break;
-		}
-		a.addNote(temp);
-	}
-	return is;
+    is >> a.channel >> a.program;
+    int n;
+    is >> n;
+    MidiNote* temp=NULL;
+    char c;
+    for (int i = 0; i < n; i++) {
+        is >> c;
+        switch (c)
+        {
+        case 'n':
+            temp = new Note;
+            is >> *temp;
+            break;
+        case 'r':
+            temp = new Rest;
+            is >> *temp;
+            break;
+        case 'm':
+            temp = new MultiNote;
+            is >> *temp;
+            break;
+        default:
+            break;
+        }
+        a.addNote(temp);
+    }
+    return is;
 }
 std::ostream& operator<<(std::ostream& os, const MidiNote& a) {
-	a.output(os);
-	return os;
+    a.output(os);
+    return os;
 }
 void Note::output(std::ostream& os)const {
-	os << 'n' << ' ' << MidiTonoteName()<<' '<<duration;
+    os << 'n' << ' ' << MidiTonoteName()<<' '<<duration;
 }
 void Rest::output(std::ostream& os)const {
-	os << 'r' << ' ' << duration;
+    os << 'r' << ' ' << duration;
 }
 void MultiNote::output(std::ostream& os)const {
-	os << 'm' << ' ' << MidiTonoteName() << ' ' << duration;
-	os << '\n'<< notes.size();
-	for (const auto& note : notes) {
-		os << '\n' << note.MidiTonoteName();
-	}
+    os << 'm' << ' ' << MidiTonoteName() << ' ' << duration;
+    os << '\n'<< notes.size();
+    for (const auto& note : notes) {
+        os << '\n' << note.MidiTonoteName();
+    }
 }
 std::istream& operator>>(std::istream& is,MidiNote& a) {
-	a.input(is);
-	return is;
+    a.input(is);
+    return is;
 }
 void Note::input(std::istream& is) {
-	std::string name;
-	is >> name >> duration;
-	pitch = noteNameToMidi(name);
+    std::string name;
+    is >> name >> duration;
+    pitch = noteNameToMidi(name);
 }
 void Rest::input(std::istream& is) {
-	is >> duration;
+    is >> duration;
 }
 void MultiNote::input(std::istream& is) {
-	std::string name;
-	is >> name >> duration;
-	pitch = noteNameToMidi(name);
-	int n;
-	is >> n;
-	for (int i = 0; i < n; i++) {
-		is >> name;
-		pitch = noteNameToMidi(name);
-		addNote(pitch);
-	}
+    std::string name;
+    is >> name >> duration;
+    pitch = noteNameToMidi(name);
+    int n;
+    is >> n;
+    for (int i = 0; i < n; i++) {
+        is >> name;
+        pitch = noteNameToMidi(name);
+        addNote(pitch);
+    }
 }
 void Score::load(std::string s) {
-	std::ifstream fin;
-	fin.open(s);
-	if (!fin.is_open()) {
-		std::cerr << "ÎŞ·¨´ò¿ªÎÄ¼ş½øĞĞ±£´æ£¡" << std::endl;
-		return;
-	}
-	std::string a;
-	fin >> a;
-	if (a != "midifile") {
-		std::cerr << "¸ñÊ½´íÎó£¡" << std::endl;
-		return;
-	}
-	fin >> *this;
-	fin.close();
+    std::ifstream fin;
+    fin.open(s);
+    if (!fin.is_open()) {
+        std::cerr << "æ— æ³•æ‰“å¼€æ–‡ä»¶è¿›è¡Œä¿å­˜ï¼" << std::endl;
+        return;
+    }
+    std::string a;
+    fin >> a;
+    if (a != "midifile") {
+        std::cerr << "æ ¼å¼é”™è¯¯ï¼" << std::endl;
+        return;
+    }
+    fin >> *this;
+    fin.close();
 }
 void Score::save(std::string s) {
-	std::ofstream fout;
-	fout.open(s);
-	if (!fout.is_open()) {
-		std::cerr << "ÎŞ·¨´ò¿ªÎÄ¼ş½øĞĞ¶ÁÈ¡£¡" << std::endl;
-		return;
-	}
-	fout << "midifile\n";
-	fout << *this;
-	fout.close();
+    std::ofstream fout;
+    fout.open(s);
+    if (!fout.is_open()) {
+        std::cerr << "æ— æ³•æ‰“å¼€æ–‡ä»¶è¿›è¡Œè¯»å–ï¼" << std::endl;
+        return;
+    }
+    fout << "midifile\n";
+    fout << *this;
+    fout.close();
 }
