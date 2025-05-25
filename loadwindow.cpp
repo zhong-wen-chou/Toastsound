@@ -1,5 +1,7 @@
 #include "loadwindow.h"
 #include "mainwindow.h" // 用于返回主界面
+#include "song.h"
+#include <QFileDialog>
 
 LoadWindow::LoadWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -90,6 +92,7 @@ void LoadWindow::connectSignals()
 {
     connect(returnButton, &QPushButton::clicked, this, &LoadWindow::onReturnToMain);
     connect(volumeButton, &QPushButton::clicked, this, &LoadWindow::showVolumeControl);
+    connect(selectAudioButton, &QPushButton::clicked, this, &LoadWindow::selectAudio);
 
     // 音量滑块联动（可扩展为实际音量控制）
     connect(volumeSlider, &QSlider::valueChanged, [this](int value) {
@@ -115,4 +118,24 @@ void LoadWindow::showVolumeControl()
 
     // 调整按钮文本（可选）
     volumeButton->setText(isVolumeVisible ? "隐藏音量" : "音量");
+}
+
+void LoadWindow::selectAudio()
+{
+    QString fileName = QFileDialog::getOpenFileName(
+        nullptr,
+        "选择要加载的文件",
+        "",
+        "MIDI Files (*.mid *.txt *.mscore);;All Files (*)"
+        );
+
+    // 如果用户选了文件
+    if (!fileName.isEmpty()) {
+        Score score;
+        score.load(fileName.toStdString());  // 调用你写的加载函数
+        score.play();
+        qDebug() << "文件已加载：" << fileName;
+    } else {
+        qDebug() << "用户取消了文件选择";
+    }
 }
