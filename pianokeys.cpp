@@ -7,6 +7,7 @@
 #include<QMap>
 #include<QKeySequence>
 #include <QKeyEvent>
+#include "song.h"
 
 // 琴键尺寸定义
 const int WHITE_KEY_WIDTH = 35;   // 缩小宽度以适应更多琴键
@@ -142,6 +143,8 @@ void PianoKeys::keyPressEvent(QKeyEvent *event)
     if (keyMap.contains(event->key())) {
         int keyIndex = keyMap[event->key()];
         updateKeyVisual(keyIndex, true);
+        Note tmpnote(60+keyIndex,0.25);
+        tmpnote.play(midiOut, 120);
         if (keyCallback) keyCallback(keyIndex); // 触发回调函数
         event->accept();
     }
