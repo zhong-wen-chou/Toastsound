@@ -8,6 +8,8 @@
 #include<fstream>
 #include "RtMidi.h"
 
+extern RtMidiOut midiOut;
+
 struct TimedMessage {
     int timestamp;  // 优先级依据
     std::vector<unsigned char> message;  // 实际数据
@@ -58,13 +60,13 @@ public:
     std::string MidiTonoteName()const;
 
     //获取和编辑数据的方法
-    virtual int getpitch() {
+    virtual int getpitch() const{
         return pitch;
     }
-    virtual double getduration() {
+    virtual double getduration() const{
         return duration;
     }
-    virtual int getvelocity() { return 0; }
+    virtual int getvelocity() const{ return 0; }
     virtual void setpitch(int n) {
         pitch = n;
     }
@@ -72,6 +74,9 @@ public:
         duration = a;
     }
     virtual void setvelocity(int n) {}
+    //演奏专用
+    virtual void NoteOn(RtMidiOut& midiOut, int bpm, int channel = 0) {};
+	virtual void NoteOff(RtMidiOut& midiOut, int bpm, int channel = 0) {};
 };
 class Note : public MidiNote {
     int velocity; // 力度 (0-127)，暂时没写修改力度的功能
@@ -86,11 +91,27 @@ public:
     MidiNote* clone()const {
         return new Note(pitch, duration, velocity);
     }
-    int getvelocity() {
+    int getvelocity() const{
         return velocity;
     }
     void setvelocity(int n) {
         velocity = n;
+    }
+	void NoteOn(RtMidiOut& midiOut, int bpm, int channel = 0) {
+		std::vector<unsigned char> message = {
+			static_cast<unsigned char>(0x90 | channel), // Note On + 通道
+			static_cast<unsigned char>(pitch),          // 音高 (0-127)
+			static_cast<unsigned char>(velocity)        // 力度 (1-127)
+		};
+		midiOut.sendMessage(&message);
+	}
+    void NoteOff(RtMidiOut& midiOut, int bpm, int channel = 0) {
+        std::vector<unsigned char> message = {
+            static_cast<unsigned char>(0x80 | channel), // Note Off + 通道
+            static_cast<unsigned char>(pitch),          // 音高 (0-127)
+            static_cast<unsigned char>(0)        // 力度 (1-127)
+        };
+        midiOut.sendMessage(&message);
     }
 };
 class Rest : public MidiNote {
@@ -109,6 +130,27 @@ public:
     MidiNote* clone()const {
         return new Rest(duration);
     }
+};
+class MultiNote :public MidiNote {
+	std::vector<Note> notes;//音符数组
+    int velocity; // 力度 (0-127)，暂时没写修改力度的功能
+    void output(std::ostream& os)const;
+    void input(std::istream& is);
+public:
+	MultiNote(int pitch = 60, double duration = 1.0, int velocity = 90)
+		: MidiNote(pitch, duration), velocity(velocity) {}
+	void addNote(int pitch,int velocity=90) {
+		notes.push_back(Note(pitch,duration,velocity));
+	}
+    MidiNote* clone()const {
+		MultiNote* mNote = new MultiNote(pitch, duration, velocity);
+        for (const auto& note : notes) {
+            mNote->addNote(note.getpitch(), note.getvelocity());
+        }
+        return mNote;
+    }
+    void play(RtMidiOut& midiOut, int bpm, int channel = 0) override;
+    void inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t);
 };
 class Track {
     std::vector<MidiNote*> notes;//音符指针数组
@@ -149,54 +191,39 @@ public:
     friend std::istream& operator>>(std::istream& is, Track& a);
 
     //获取和编辑数据的方法
-    int getchannel() {
+    int getchannel() const{
         return channel;
     }
     void setchannel(int n) {
         channel = n;
     }
-    int getprogram() {
+    int getprogram() const{
         return program;
     }
     void setprogram(int n) {
         program = n;
     }
-    int getnotesnum() {
+    int getnotesnum() const{
         return notes.size();
     }
-    MidiNote* getnotesbyn(int n) {
+    MidiNote* getnotesbyn(int n)const {
         if (n < notes.size()||n>=0) {
             return notes[n];
         }
         return NULL;
     }
+    void clear() {
+        for (auto& note : notes) {
+            delete note;
+        }
+        notes.clear();
+    }
 };
 class Score {
     std::vector<Track> tracks;
-    RtMidiOut midiOut;
     int bpm;
-
-    unsigned int chooseMidiPort(RtMidiOut& midiOut) {
-        // 获取midi端口数量,设备相关
-        unsigned int ports = midiOut.getPortCount();
-        if (ports == 0) {
-            throw std::runtime_error("没有可用的MIDI输出端口");
-        }
-
-        return 0; // 默认选择第一个端口
-    }
 public:
-    Score(int bpm=120):bpm(bpm) {
-        // 初始化MIDI输出
-        try {
-            unsigned int port = chooseMidiPort(midiOut);
-            midiOut.openPort(port);
-        }
-        catch (RtMidiError& error) {
-            error.printMessage();
-            throw;
-        }
-    }
+    Score(int bpm=120):bpm(bpm){}
 
     void addTrack(Track track) {
         tracks.push_back(std::move(track));
@@ -210,13 +237,13 @@ public:
     friend std::istream& operator>>(std::istream& is, Score& a);
 
     //获取和编辑数据的方法
-    int getbpm() {
+    int getbpm() const{
         return bpm;
     }
     void setbpm(int n) {
         bpm = n;
     }
-    int gettracksnum() {
+    int gettracksnum() const{
         return tracks.size();
     }
     Track& gettrackbyn(int n) {
@@ -228,3 +255,7 @@ public:
         }
     }
 };
+
+extern Track Metronome;//节拍器
+void setMetronome(int n, int m);//n分音符为1拍，每小节m拍
+void playMetronome(int bpm);//循环播放节拍器

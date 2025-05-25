@@ -1,6 +1,25 @@
 #include "song.h"
 #include <windows.h>
 #include <mmsystem.h> // timeBeginPeriod 需要
+
+RtMidiOut midiOut;
+
+Track Metronome(0,9);
+
+void setMetronome(int n,int m) {//n分音符为1拍，每小节m拍,设置节拍器
+	Metronome.clear();
+	double duration = 4.0 / n;
+	Metronome.addNote(new Note(75, duration));
+	for (int i = 0; i < m - 1; i++) {
+		Metronome.addNote(new Note(76, duration));
+	}
+}
+void playMetronome(int bpm) {
+	while (1) {
+		Metronome.play(midiOut, bpm);
+	}
+}
+
 int MidiNote::noteNameToMidi(const std::string& name) {
 	int pitch = 12;//C0
 	char c = name[0];
@@ -82,6 +101,42 @@ void Note::play(RtMidiOut& midiOut, int bpm, int channel) {
 	message[2] = 0; // 力度为0表示音符关
 	midiOut.sendMessage(&message);
 }
+void MultiNote::play(RtMidiOut& midiOut, int bpm, int channel) {
+	std::vector<unsigned char> message;
+
+	// 音符开 (0x90 = Note On, channel)
+	message.push_back(0x90 | channel);
+	message.push_back(pitch);
+	message.push_back(velocity);
+	midiOut.sendMessage(&message);
+	// 发送所有 Note On 消息（每个音符单独发送）
+	for (const auto& note : notes) {
+		std::vector<unsigned char> message;
+		message.push_back(0x90 | channel);  // Note On + 通道
+		message.push_back(note.getpitch());  // 音高
+		message.push_back(note.getvelocity()); // 力度
+		midiOut.sendMessage(&message);
+	}
+	// 计算持续时间(毫秒)
+	int ms = (60000.0 / bpm) * duration; // 四分音符 = 60000/bpm 毫秒
+
+	//暂停时间
+	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+	// 音符关
+	message[0] = 0x80 | channel; // 0x80 = Note Off
+	message[2] = 0; // 力度为0表示音符关
+	midiOut.sendMessage(&message);
+	for (const auto& note : notes) {
+		std::vector<unsigned char> message;
+		message.push_back(0x80 | channel);  // Note Off + 通道
+		message.push_back(note.getpitch()); // 音高
+		message.push_back(0);               // 力度=0
+		midiOut.sendMessage(&message);
+	}
+
+
+}
 void Track::play(RtMidiOut& midiOut, int bpm) {
 	// 设置音色
 	std::vector<unsigned char> programChange;
@@ -139,6 +194,36 @@ void Note::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMess
 	message[2] = 0; // 力度为0表示音符关
 	pq.push(TimedMessage(t, message));
 }
+void MultiNote::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t) {
+	std::vector<unsigned char> message;
+
+	// 音符开 (0x90 = Note On, channel)
+	message.push_back(0x90 | channel);
+	message.push_back(pitch);
+	message.push_back(velocity);
+	pq.push(TimedMessage(t, message));
+	for (const auto& note : notes) {
+		std::vector<unsigned char> message;
+		message.push_back(0x90 | channel);  // Note On + 通道
+		message.push_back(note.getpitch());  // 音高
+		message.push_back(note.getvelocity()); // 力度
+		pq.push(TimedMessage(t, message));
+	}
+
+	// 计算持续时间(毫秒)
+	t += (60000.0 / bpm) * duration; // 四分音符 = 60000/bpm 毫秒
+	//音符关
+	message[0] = 0x80 | channel; // 0x80 = Note Off
+	message[2] = 0; // 力度为0表示音符关
+	pq.push(TimedMessage(t, message));
+	for (const auto& note : notes) {
+		std::vector<unsigned char> message;
+		message.push_back(0x80 | channel);  // Note Off + 通道
+		message.push_back(note.getpitch()); // 音高
+		message.push_back(0);               // 力度=0
+		pq.push(TimedMessage(t, message));
+	}
+}
 void Track::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm) {
 	// 设置音色
 	std::vector<unsigned char> programChange;
@@ -195,6 +280,10 @@ std::istream& operator>>(std::istream& is, Track& a) {
 			temp = new Rest;
 			is >> *temp;
 			break;
+		case 'm':
+			temp = new MultiNote;
+			is >> *temp;
+			break;
 		default:
 			break;
 		}
@@ -212,6 +301,13 @@ void Note::output(std::ostream& os)const {
 void Rest::output(std::ostream& os)const {
 	os << 'r' << ' ' << duration;
 }
+void MultiNote::output(std::ostream& os)const {
+	os << 'm' << ' ' << MidiTonoteName() << ' ' << duration;
+	os << '\n'<< notes.size();
+	for (const auto& note : notes) {
+		os << '\n' << note.MidiTonoteName();
+	}
+}
 std::istream& operator>>(std::istream& is,MidiNote& a) {
 	a.input(is);
 	return is;
@@ -224,7 +320,18 @@ void Note::input(std::istream& is) {
 void Rest::input(std::istream& is) {
 	is >> duration;
 }
-
+void MultiNote::input(std::istream& is) {
+	std::string name;
+	is >> name >> duration;
+	pitch = noteNameToMidi(name);
+	int n;
+	is >> n;
+	for (int i = 0; i < n; i++) {
+		is >> name;
+		pitch = noteNameToMidi(name);
+		addNote(pitch);
+	}
+}
 void Score::load(std::string s) {
 	std::ifstream fin;
 	fin.open(s);
