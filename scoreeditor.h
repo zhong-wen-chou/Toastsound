@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include "pianokeys.h" // 添加钢琴键头文件
+#include "song.h"
+
+extern int selfbpm;
 
 class ScoreEditor : public QMainWindow
 {
@@ -10,16 +13,24 @@ class ScoreEditor : public QMainWindow
 
 public:
     explicit ScoreEditor(QWidget *parent = nullptr);
+    bool isopenme=false; // 调音器是否打开
     ~ScoreEditor();
 
 signals:
     void exitRequested();
+
+private slots:
+    void startluzhi();
+    void savediyscore();
+    void startmebutton_clicked();
+    void startmetronome(const Note& menote);
 
 private:
     PianoKeys *pianoKeys = nullptr; // 钢琴键组件
     QPushButton *exitButton = nullptr; // 退出按钮
 
     void createButtonLayout(); // 创建按钮布局
+    void creatediyscore(); // 标准化乐谱并储存
 };
 
 #endif // SCOREEDITOR_H
