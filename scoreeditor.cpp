@@ -5,6 +5,13 @@
 #include<QGroupBox>
 #include<QLabel>
 #include<QSlider>
+#include <QFileDialog>
+#include <QtConcurrent>
+#include "pianokeys.h"
+#include "song.h"
+
+int selfbpm=120; // 为节拍器准备
+
 ScoreEditor::ScoreEditor(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle("钢琴键盘");
@@ -35,7 +42,7 @@ ScoreEditor::ScoreEditor(QWidget *parent) : QMainWindow(parent)
     // 音量控制
     QGroupBox *volumeGroup = new QGroupBox("音量", this);
     QHBoxLayout *volumeLayout = new QHBoxLayout(volumeGroup);
-    QLabel *volumeLabel = new QLabel("70%", this);
+    QLabel *volumeLabel = new QLabel("90%", this);
     QSlider *volumeSlider = new QSlider(Qt::Horizontal, this);
     volumeSlider->setRange(0, 100);
     volumeSlider->setValue(70);
@@ -79,16 +86,111 @@ ScoreEditor::ScoreEditor(QWidget *parent) : QMainWindow(parent)
     // 连接滑块信号到显示更新
     connect(tempoSlider, &QSlider::valueChanged, [tempoLabel](int value) {
         tempoLabel->setText(QString("%1 BPM").arg(value));
+        initbpm=value;
+        selfbpm=value;
     });
 
     connect(volumeSlider, &QSlider::valueChanged, [volumeLabel](int value) {
         volumeLabel->setText(QString("%1%").arg(value));
+        initvolumn=value;
     });
 
     // 连接退出按钮
+    connect(pauseButton, &QPushButton::clicked, this, &ScoreEditor::startluzhi);
     connect(exitButton, &QPushButton::clicked, this, &ScoreEditor::exitRequested);
+    connect(saveButton, &QPushButton::clicked, this, &ScoreEditor::savediyscore);
+    connect(metronomeButton, &QPushButton::clicked, this, &ScoreEditor::startmebutton_clicked);
 }
 
+void ScoreEditor::startluzhi()
+{
+    isstart=true;
+    keyLogs.clear(); // 清除旧记录
+    qDebug() << "计时器已启动";
+    timer.restart();
+}
 
+void ScoreEditor::savediyscore()
+{
+    isstart=false;
+    qDebug() << "保存乐谱";   
+    if (keyLogs.isEmpty()) return;
+
+    // 弹出保存文件窗口
+    QString fileName = QFileDialog::getSaveFileName(this,
+                                                    "保存为 MIDI-like 文本文件",
+                                                    "",
+                                                    "Text Files (*.txt);;All Files (*)");
+
+    if (fileName.isEmpty()) return;
+
+    // 确保文件名以 .txt 结尾
+    if (!fileName.endsWith(".txt")) {
+        fileName += ".txt";
+    }
+
+    QVector<std::tuple<std::string, qint64, qint64>> sortedLogs = keyLogs;
+    std::sort(sortedLogs.begin(), sortedLogs.end(), [](const auto& a, const auto& b) {
+        return std::get<1>(a) < std::get<1>(b); // 按开始时间排序
+    });
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
+
+    QTextStream out(&file);
+
+    // 文件头部信息
+    out << "midifile\n";
+    out << initbpm << "\n";
+    out << "1\n";
+    out << "0\n0\n413\n";
+
+    double quarterNoteMs = 60000.0 / initbpm;
+    qint64 lastEndTime = 0;
+
+    for (const auto& log : sortedLogs) {
+        const std::string& pitch = std::get<0>(log);
+        qint64 start = std::get<1>(log);
+        qint64 end = std::get<2>(log);
+
+        // 如果两个音符之间有空隙，加休止符
+        if (start > lastEndTime) {
+            double restDuration = (start - lastEndTime) / quarterNoteMs;
+            if (restDuration >= 0.05) { // 可忽略极短休止
+                out << "r " << QString::number(restDuration, 'f', 4) << "\n";
+            }
+        }
+
+        // 写音符
+        double noteDuration = (end - start) / quarterNoteMs;
+        out << "n " << QString::fromStdString(pitch) << " " << QString::number(noteDuration, 'f', 4) << "\n";
+
+        lastEndTime = end;
+    }
+
+    file.close();
+}
+
+void ScoreEditor::startmetronome(const Note& menote)
+{
+    while (isopenme) {
+        // 可以在这里播放节拍声（Beep、QSound、或 pianoKeys->playClickSound()）
+        menote.constplay(midiOut,selfbpm,9);
+        qDebug() << "tick";
+        QThread::msleep(60000 / selfbpm); // 按当前 BPM 延时
+    }
+}
+
+void ScoreEditor::startmebutton_clicked()
+{
+    //qDebug() << "clicked";
+    isopenme = !isopenme;
+    if (isopenme) {
+        Note menote(77,0.25);
+        QtConcurrent::run([this, menote]() {
+            this->startmetronome(menote);
+        });
+    }
+}
 
 ScoreEditor::~ScoreEditor() {}
