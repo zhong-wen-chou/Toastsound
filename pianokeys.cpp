@@ -6,9 +6,14 @@
 #include <QDebug>
 #include<QMap>
 #include<QKeySequence>
+#include <QVBoxLayout>
 #include <QKeyEvent>
-#include "song.h"
+#include <QVector>
+#include <QPair>
+#include <QString>
 
+#include "song.h"
+#include "scoreeditor.h"
 // 琴键尺寸定义
 const int WHITE_KEY_WIDTH = 35;   // 缩小宽度以适应更多琴键
 const int BLACK_KEY_WIDTH = 24;   // 黑键宽度比例
@@ -16,6 +21,14 @@ const int KEY_HEIGHT = 100;
 const int OCTAVE_WHITE_KEYS = 7;  // 每八度白键数
 const int OCTAVE_BLACK_KEYS = 5;  // 每八度黑键数
 const int OCTAVE_COUNT = 4;       // 4个八度
+int initbpm=120; // 初始化节奏和音量
+int initvolumn=90;
+bool isstart=false; // 是否开始录制
+QElapsedTimer timer; // 计时器
+qint64 notebegin; // 按下的时间
+qint64 noteend; // 松开的时间
+QVector<std::tuple<std::string, qint64, qint64>> keyLogs;
+
 
 PianoKeys::PianoKeys(QWidget *parent) : QWidget(parent)
 {
@@ -144,13 +157,13 @@ void PianoKeys::initKeytoname()
 
     // 第一八度：C4-B4（白键索引0-6，黑键索引28-32）
     keytoname = {
-        // 白键
-        { Qt::Key_A, "c4" }, { Qt::Key_S, "d4" }, { Qt::Key_D, "e4" }, { Qt::Key_F, "f4" },
-        { Qt::Key_G, "g4" }, { Qt::Key_H, "a4" }, { Qt::Key_J, "b4" },
-        // 黑键（C#4, D#4, F#4, G#4, A#4）
-        { Qt::Key_W, "c4s" }, { Qt::Key_E, "d4s" }, { Qt::Key_R, "f4s" }, { Qt::Key_T, "g4s" },
-        { Qt::Key_Y, "a4s" },
-              };
+                 // 白键
+                 { Qt::Key_A, "c4" }, { Qt::Key_S, "d4" }, { Qt::Key_D, "e4" }, { Qt::Key_F, "f4" },
+                 { Qt::Key_G, "g4" }, { Qt::Key_H, "a4" }, { Qt::Key_J, "b4" },
+                 // 黑键（C#4, D#4, F#4, G#4, A#4）
+                 { Qt::Key_W, "c4s" }, { Qt::Key_E, "d4s" }, { Qt::Key_R, "f4s" }, { Qt::Key_T, "g4s" },
+                 { Qt::Key_Y, "a4s" },
+                 };
 
     // 第二八度：C5-B5（白键索引7-13，黑键索引33-37）
     keytoname.insert({
@@ -164,23 +177,23 @@ void PianoKeys::initKeytoname()
 
     // 第三八度：C6-B6（白键索引14-20，黑键索引38-42）
     keytoname.insert({
-        // 白键
-        { Qt::Key_V, "c6" }, { Qt::Key_B, "d6" }, { Qt::Key_N, "e6" }, { Qt::Key_M, "f6" },
-        { Qt::Key_Comma, "g6" }, { Qt::Key_Period, "a6" }, { Qt::Key_Slash, "b6" },
-        // 黑键（C#6, D#6, F#6, G#6, A#6）
-        { Qt::Key_2, "c6s" }, { Qt::Key_3, "d6s" }, { Qt::Key_4, "f6s" }, { Qt::Key_5, "g6s" },
-        { Qt::Key_7, "a6s" },
-                   });
+                      // 白键
+                      { Qt::Key_V, "c6" }, { Qt::Key_B, "d6" }, { Qt::Key_N, "e6" }, { Qt::Key_M, "f6" },
+                      { Qt::Key_Comma, "g6" }, { Qt::Key_Period, "a6" }, { Qt::Key_Slash, "b6" },
+                      // 黑键（C#6, D#6, F#6, G#6, A#6）
+                      { Qt::Key_2, "c6s" }, { Qt::Key_3, "d6s" }, { Qt::Key_4, "f6s" }, { Qt::Key_5, "g6s" },
+                      { Qt::Key_7, "a6s" },
+                      });
 
     // 第四八度：C3-B3（白键索引21-27，黑键索引43-47）
     keytoname.insert({
-        // 白键
-        { Qt::Key_4, "c3" }, { Qt::Key_5, "d3" }, { Qt::Key_6, "e3" }, { Qt::Key_7, "f3" },
-        { Qt::Key_8, "g3" }, { Qt::Key_9, "a3" }, { Qt::Key_0, "b3" },
-        // 黑键（C#3, D#3, F#3, G#3, A#3）
-        { Qt::Key_Minus, "c3s" }, { Qt::Key_Equal, "d3s" }, { Qt::Key_BracketRight, "f3s" },
-        { Qt::Key_Slash, "g3s" }, { Qt::Key_Colon, "a3s" },
-                   });
+                      // 白键
+                      { Qt::Key_4, "c3" }, { Qt::Key_5, "d3" }, { Qt::Key_6, "e3" }, { Qt::Key_7, "f3" },
+                      { Qt::Key_8, "g3" }, { Qt::Key_9, "a3" }, { Qt::Key_0, "b3" },
+                      // 黑键（C#3, D#3, F#3, G#3, A#3）
+                      { Qt::Key_Minus, "c3s" }, { Qt::Key_Equal, "d3s" }, { Qt::Key_BracketRight, "f3s" },
+                      { Qt::Key_Slash, "g3s" }, { Qt::Key_Colon, "a3s" },
+                      });
 }
 
 
@@ -188,6 +201,9 @@ void PianoKeys::keyPressEvent(QKeyEvent *event)
 {
     if (keyMap.contains(event->key())) {
         int keyIndex=keyMap[event->key()];
+        if(isstart){
+            notebegin=timer.elapsed();  // 返回毫秒数
+        }
         int midinum= MidiNote::noteNameToMidi(keytoname[event->key()]);
         qDebug()<<keytoname[event->key()];
         updateKeyVisual(keyIndex, true);
@@ -205,6 +221,10 @@ void PianoKeys::keyReleaseEvent(QKeyEvent *event)
         int midinum= MidiNote::noteNameToMidi(keytoname[event->key()]);
         Note tmpnote(midinum);
         tmpnote.NoteOff(midiOut);
+        if(isstart){
+            noteend=timer.elapsed();  // 返回毫秒数
+            keyLogs.append(std::make_tuple(keytoname[event->key()], noteend,notebegin));
+        }
         updateKeyVisual(keyIndex, false);
         event->accept();
     }
