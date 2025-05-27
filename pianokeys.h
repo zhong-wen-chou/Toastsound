@@ -5,6 +5,15 @@
 #include <QPushButton>
 #include <QList>
 #include <QMap>
+#include <QElapsedTimer>
+
+extern int initbpm; // 初始化节奏和音量
+extern int initvolumn;
+extern bool isstart; // 是否开始录制
+extern QElapsedTimer timer; // 计时器s
+extern qint64 notebegin; // 按下的时间
+extern qint64 noteend; // 松开的时间
+extern QVector<std::tuple<std::string, qint64, qint64>> keyLogs;
 
 class PianoKeys : public QWidget
 {
