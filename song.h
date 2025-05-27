@@ -88,6 +88,26 @@ public:
     }
 
     void play(RtMidiOut& midiOut, int bpm, int channel = 0) override;
+    void constplay(RtMidiOut& midiOut, int bpm, int channel = 0)const{
+        std::vector<unsigned char> message;
+
+        // 音符开 (0x90 = Note On, channel)
+        message.push_back(0x90 | channel);
+        message.push_back(pitch);
+        message.push_back(velocity);
+        midiOut.sendMessage(&message);
+
+        // 计算持续时间(毫秒)
+        int ms = (60000.0 / bpm) * duration; // 四分音符 = 60000/bpm 毫秒
+
+        //暂停时间
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+        // 音符关
+        message[0] = 0x80 | channel; // 0x80 = Note Off
+        message[2] = 0; // 力度为0表示音符关
+        midiOut.sendMessage(&message);
+    }
     void inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t);
     MidiNote* clone()const {
         return new Note(pitch, duration, velocity);
