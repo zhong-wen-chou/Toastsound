@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "pianokeys.h" // 添加钢琴键头文件
 #include "song.h"
+#include "editwindow.h"
 
 extern int selfbpm;
 
@@ -25,9 +26,12 @@ private slots:
     void startmebutton_clicked();
     void startmetronome(const Note& menote);
 
+    void openEditMode();//打开编辑模式
+
 private:
     PianoKeys *pianoKeys = nullptr; // 钢琴键组件
     QPushButton *exitButton = nullptr; // 退出按钮
+    EditWindow *editWindow = nullptr; // 编辑窗口指针
 
     void createButtonLayout(); // 创建按钮布局
     void creatediyscore(); // 标准化乐谱并储存

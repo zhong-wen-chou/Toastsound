@@ -7,6 +7,7 @@
 #include<QSlider>
 #include <QFileDialog>
 #include <QtConcurrent>
+#include <qthread.h>
 #include "pianokeys.h"
 #include "song.h"
 
@@ -70,12 +71,24 @@ ScoreEditor::ScoreEditor(QWidget *parent) : QMainWindow(parent)
     QPushButton *metronomeButton = new QPushButton("节拍器", this);
     QPushButton *pauseButton = new QPushButton("开始录制", this);
     QPushButton *saveButton = new QPushButton("保存曲谱", this);
+    QPushButton *editModeButton = new QPushButton("编辑模式", this); // 编辑模式按钮
     exitButton = new QPushButton("退出", this);
     exitButton->setStyleSheet("background-color: #FF4444; color: white;");
-
+    editModeButton->setStyleSheet(
+        "QPushButton {"
+        "    background-color: #2196F3;"
+        "    color: white;"
+        "    font-weight: bold;"
+        "    border-radius: 5px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #0D47A1;"
+        "}"
+        );
     buttonLayout->addWidget(metronomeButton);
     buttonLayout->addWidget(pauseButton);
     buttonLayout->addWidget(saveButton);
+    buttonLayout->addWidget(editModeButton); // 编辑模式按钮
     buttonLayout->addWidget(exitButton);
 
     rightLayout->addLayout(buttonLayout);
@@ -100,6 +113,7 @@ ScoreEditor::ScoreEditor(QWidget *parent) : QMainWindow(parent)
     connect(exitButton, &QPushButton::clicked, this, &ScoreEditor::exitRequested);
     connect(saveButton, &QPushButton::clicked, this, &ScoreEditor::savediyscore);
     connect(metronomeButton, &QPushButton::clicked, this, &ScoreEditor::startmebutton_clicked);
+    connect(editModeButton, &QPushButton::clicked, this, &ScoreEditor::openEditMode);//连接编辑模式按钮和函数
 }
 
 void ScoreEditor::startluzhi()
@@ -113,7 +127,7 @@ void ScoreEditor::startluzhi()
 void ScoreEditor::savediyscore()
 {
     isstart=false;
-    qDebug() << "保存乐谱";   
+    qDebug() << "保存乐谱";
     if (keyLogs.isEmpty()) return;
 
     // 弹出保存文件窗口
@@ -191,6 +205,18 @@ void ScoreEditor::startmebutton_clicked()
             this->startmetronome(menote);
         });
     }
+}
+//编辑模式的槽函数
+void ScoreEditor::openEditMode()
+{
+    if (!editWindow) {
+        editWindow = new EditWindow(this);
+        connect(editWindow, &QWidget::destroyed, [this]() {
+            editWindow = nullptr; // 窗口关闭后重置指针
+        });
+    }
+    hide();
+    editWindow->show();
 }
 
 ScoreEditor::~ScoreEditor() {}
