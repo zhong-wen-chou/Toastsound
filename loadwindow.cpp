@@ -150,6 +150,7 @@ void LoadWindow::selectAudio()
 }
 
 void LoadWindow::beginplay(){
+    score.restart();
     QtConcurrent::run([this]() {
         score.play();
     });

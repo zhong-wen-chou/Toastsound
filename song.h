@@ -272,6 +272,7 @@ public:
     }
 
     void play();
+    void restart();            //重新播放
     void stop();               // 停止播放
     void save(std::string s);//保存文件到s,s是路径
     void load(std::string s);//加载s文件

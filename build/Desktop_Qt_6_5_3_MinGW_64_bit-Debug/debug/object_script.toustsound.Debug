@@ -1,0 +1,13 @@
+debug/RtMidi.o
+debug/editwindow.o
+debug/loadwindow.o
+debug/main.o
+debug/mainwindow.o
+debug/pianokeys.o
+debug/scoreeditor.o
+debug/song.o
+debug/moc_editwindow.o
+debug/moc_loadwindow.o
+debug/moc_mainwindow.o
+debug/moc_pianokeys.o
+debug/moc_scoreeditor.o
