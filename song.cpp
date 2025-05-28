@@ -3,7 +3,7 @@
 #include <mmsystem.h> // timeBeginPeriod 需要
 
 RtMidiOut midiOut;
-
+/*
 Track Metronome(0,9);
 
 void setMetronome(int n,int m) {//n分音符为1拍，每小节m拍,设置节拍器
@@ -19,6 +19,7 @@ void playMetronome(int bpm) {
         Metronome.play(midiOut, bpm);
     }
 }
+*/
 
 int MidiNote::noteNameToMidi(const std::string& name) {
     int pitch = 12;//C0
@@ -152,6 +153,32 @@ void Track::play(RtMidiOut& midiOut, int bpm) {
 
 void Score::play() {
     //创建时间优先序列，元素为rtmidi消息,优先度为时间
+    /*shouldPlay = true;
+    std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage> midimessages;
+    for (auto& track : tracks) {
+        track.inserttoqueue(midimessages, bpm);
+    }
+
+    timeBeginPeriod(1);
+    int currentTime = 0;
+    while (!midimessages.empty() && shouldPlay) {
+        TimedMessage msg = midimessages.top();
+        midimessages.pop();
+
+        int delay = msg.timestamp - currentTime;
+        if (delay > 0) {
+            for (int slept = 0; slept < delay && shouldPlay; ++slept)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+
+        if (!shouldPlay) break;
+
+        midiOut.sendMessage(&msg.message);
+        currentTime = msg.timestamp;
+    }
+    timeEndPeriod(1);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));*/
     std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage> midimessages;
     for (auto& track : tracks) {
         track.inserttoqueue(midimessages, bpm);
@@ -160,7 +187,7 @@ void Score::play() {
     timeBeginPeriod(1); // 设置为 1ms 精度
     //通过时间循环将优先队列的消息传给播放器
     int currentTime = 0;
-    while (!midimessages.empty()) {
+    while (!midimessages.empty() && shouldPlay) {
         //弹出优先队列的第一个元素
         TimedMessage msg = midimessages.top();
         midimessages.pop();
@@ -177,6 +204,11 @@ void Score::play() {
     // 在循环结束后添加以播放完整最后一个音
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
+
+void Score::stop(){
+    shouldPlay = false;
+}
+
 void Note::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t) {
     std::vector<unsigned char> message;
 
