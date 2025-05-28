@@ -25,7 +25,6 @@ private slots:
     void savediyscore();
     void startmebutton_clicked();
     void startmetronome(const Note& menote);
-
     void openEditMode();//打开编辑模式
 
 private:
