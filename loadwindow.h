@@ -7,6 +7,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSlider>
+#include "song.h"
 
 class LoadWindow : public QMainWindow
 {
@@ -20,12 +21,15 @@ private slots:
     void onReturnToMain(); // 返回主界面
     void showVolumeControl(); // 显示音量控制
     void selectAudio();
+    void beginplay();
+    void stopplay();
 
 private:
     void createWidgets(); // 创建控件
     void setupLayout();   // 设置布局
     void connectSignals();// 连接信号
 
+    Score score;
     QVBoxLayout *leftButtonLayout = nullptr;
     QHBoxLayout *bottomButtonLayout = nullptr;
 
