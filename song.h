@@ -6,6 +6,7 @@
 #include<queue>
 #include<iostream>
 #include<fstream>
+#include <atomic>
 #include "RtMidi.h"
 
 extern RtMidiOut midiOut;
@@ -243,7 +244,8 @@ public:
 class Score {
     std::vector<Track> tracks;
     int bpm;
-    unsigned int chooseMidiPort(RtMidiOut& midiOut) {
+    //RtMidiOut midiOut;
+    /*unsigned int chooseMidiPort(RtMidiOut& midiOut) {
         // 获取midi端口数量,设备相关
         unsigned int ports = midiOut.getPortCount();
         if (ports == 0) {
@@ -251,17 +253,18 @@ class Score {
         }
 
         return 0; // 默认选择第一个端口
-    }
+    }*/
+    std::atomic_bool shouldPlay = true;
 public:
     Score(int bpm=120):bpm(bpm){
-        try {
+        /*try {
             unsigned int port = chooseMidiPort(midiOut);
             midiOut.openPort(port);
         }
         catch (RtMidiError& error) {
             error.printMessage();
             throw;
-        }
+        }*/
     }
 
     void addTrack(Track track) {
@@ -269,6 +272,7 @@ public:
     }
 
     void play();
+    void stop();               // 停止播放
     void save(std::string s);//保存文件到s,s是路径
     void load(std::string s);//加载s文件
 
@@ -294,7 +298,8 @@ public:
         }
     }
 };
-
+/*
 extern Track Metronome;//节拍器
 void setMetronome(int n, int m);//n分音符为1拍，每小节m拍
 void playMetronome(int bpm);//循环播放节拍器
+*/
