@@ -11,22 +11,22 @@ CONFIG += c++17
 
 SOURCES += \
     RtMidi.cpp \
+    editwindow.cpp \
     loadwindow.cpp \
     main.cpp \
     mainwindow.cpp \
     pianokeys.cpp \
     scoreeditor.cpp \
-    song.cpp \
-    toustsound.cpp
+    song.cpp
 
 HEADERS += \
     RtMidi.h \
+    editwindow.h \
     loadwindow.h \
     mainwindow.h \
     pianokeys.h \
     scoreeditor.h \
-    song.h \
-    toustsound.h
+    song.h
 
 FORMS += \
     mainwindow.ui
