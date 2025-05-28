@@ -2,6 +2,7 @@
 #include "mainwindow.h" // 用于返回主界面
 #include "song.h"
 #include <QFileDialog>
+#include <QtConcurrent>
 
 LoadWindow::LoadWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -93,6 +94,8 @@ void LoadWindow::connectSignals()
     connect(returnButton, &QPushButton::clicked, this, &LoadWindow::onReturnToMain);
     connect(volumeButton, &QPushButton::clicked, this, &LoadWindow::showVolumeControl);
     connect(selectAudioButton, &QPushButton::clicked, this, &LoadWindow::selectAudio);
+    connect(playButton, &QPushButton::clicked, this, &LoadWindow::beginplay);
+    connect(stopButton, &QPushButton::clicked, this, &LoadWindow::stopplay);
 
     // 音量滑块联动（可扩展为实际音量控制）
     connect(volumeSlider, &QSlider::valueChanged, [this](int value) {
@@ -123,7 +126,7 @@ void LoadWindow::showVolumeControl()
 void LoadWindow::selectAudio()
 {
     QString fileName = QFileDialog::getOpenFileName(
-        nullptr,
+        this,
         "选择要加载的文件",
         "",
         "MIDI Files (*.mid *.txt *.mscore);;All Files (*)"
@@ -131,11 +134,27 @@ void LoadWindow::selectAudio()
 
     // 如果用户选了文件
     if (!fileName.isEmpty()) {
-        Score score;
-        score.load(fileName.toStdString());  // 调用你写的加载函数
-        score.play();
-        qDebug() << "文件已加载：" << fileName;
+        qDebug() << "准备加载文件：" << fileName;
+
+        try {
+            score.load(fileName.toStdString()); // 你的加载函数
+            qDebug() << "文件加载成功";
+            //score.play();
+        } catch (const std::exception& e) {
+            qDebug() << "异常：" << e.what();
+        }
+
     } else {
         qDebug() << "用户取消了文件选择";
     }
+}
+
+void LoadWindow::beginplay(){
+    QtConcurrent::run([this]() {
+        score.play();
+    });
+}
+
+void LoadWindow::stopplay(){
+    score.stop();
 }
