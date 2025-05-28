@@ -171,13 +171,13 @@ void ScoreEditor::savediyscore()
         if (start > lastEndTime) {
             double restDuration = (start - lastEndTime) / quarterNoteMs;
             if (restDuration >= 0.05) { // 可忽略极短休止
-                out << "r " << QString::number(restDuration, 'f', 4) << "\n";
+                out << "r " << QString::number(restDuration, 'f', 2) << "\n";
             }
         }
 
         // 写音符
         double noteDuration = (end - start) / quarterNoteMs;
-        out << "n " << QString::fromStdString(pitch) << " " << QString::number(noteDuration, 'f', 4) << "\n";
+        out << "n " << QString::fromStdString(pitch) << " " << QString::number(noteDuration, 'f', 2) << "\n";
 
         lastEndTime = end;
     }
@@ -206,6 +206,7 @@ void ScoreEditor::startmebutton_clicked()
         });
     }
 }
+
 //编辑模式的槽函数
 void ScoreEditor::openEditMode()
 {
