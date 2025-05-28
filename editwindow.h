@@ -6,6 +6,7 @@
 #include <QListWidget>
 #include <QPaintEvent>
 #include <QVector>
+#include <QPushButton> // 添加按钮头文件
 
 class EditWindow : public QMainWindow
 {
@@ -16,21 +17,30 @@ public:
     ~EditWindow();
 
 private slots:
-    void onPianoKeyPressed(int keyIndex); // 钢琴键按下时添加音符
+    void onPianoKeyPressed(int keyIndex); // 钢琴键按下
+    void onPianoKeyReleased(int keyIndex); // 钢琴键释放
+    void exitToMain(); // 退出到主界面
+    void startPlayback(); // 开始播放
+    void saveScore(); // 保存乐谱
 
 private:
     void createWidgets();
     void setupLayout();
     void paintEvent(QPaintEvent *event) override;
-    int getTrackY(int keyIndex); // 根据键索引获取音轨Y坐标
+    int getTrackY(int keyIndex);
+    void updateNoteVisual(int keyIndex, bool isPressed); // 更新琴键视觉
+    void connectSignals();
 
     PianoKeys *pianoKeys;
     QListWidget *trackList;
-    QVector<std::tuple<int, int>> notes; // 存储音符（键索引, 水平位置）
-    int notePosition = 0; // 新音符水平位置（像素）
-    const int NOTE_WIDTH = 50; // 音符宽度
-    const int TRACK_SPACING = 40; // 音轨间距
-    const int BASE_Y = 50; // 瀑布流基准Y坐标
+    QVector<std::tuple<int, int>> notes;
+    int notePosition = 0;
+    const int NOTE_WIDTH = 50;
+    const int TRACK_SPACING = 20; // 减小音轨间距为20像素
+    const int BASE_Y = 20; // 基准Y坐标
+    QPushButton *exitButton, *playButton, *saveButton; // 新增底部按钮
+    const QColor BLACK_KEY_COLOR = QColor("#888888"); // 黑键音符颜色（深灰）
+    const QColor WHITE_KEY_COLOR = QColor("#2196F3"); // 白键音符颜色（蓝色）
 };
 
 #endif // EDITWINDOW_H
