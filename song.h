@@ -276,6 +276,9 @@ public:
     void stop();               // 停止播放
     void save(std::string s);//保存文件到s,s是路径
     void load(std::string s);//加载s文件
+    void clear(){//清空tracks
+        tracks.clear();
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Score& a);
     friend std::istream& operator>>(std::istream& is, Score& a);

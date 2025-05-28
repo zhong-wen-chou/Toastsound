@@ -368,6 +368,7 @@ void MultiNote::input(std::istream& is) {
     }
 }
 void Score::load(std::string s) {
+    this->clear();//清除之前的音轨
     std::ifstream fin;
     fin.open(s);
     if (!fin.is_open()) {
