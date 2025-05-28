@@ -234,6 +234,16 @@ public:
         }
         return NULL;
     }
+    void deletenotebyn(int n){
+        if(n<notes.size()){
+            notes.erase(notes.begin()+n);
+        }
+    }
+    void insertnotebyn(int n,MidiNote* pnote){
+        if(n<notes.size()){
+            notes.insert(notes.begin(),pnote);
+        }
+    }
     void clear() {
         for (auto& note : notes) {
             delete note;
