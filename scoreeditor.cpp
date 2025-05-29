@@ -148,20 +148,11 @@ void ScoreEditor::savediyscore()
         return std::get<1>(a) < std::get<1>(b); // 按开始时间排序
     });
 
-    QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return;
-
-    QTextStream out(&file);
-
-    // 文件头部信息
-    out << "midifile\n";
-    out << initbpm << "\n";
-    out << "1\n";
-    out << "0\n0\n413\n";
 
     double quarterNoteMs = 60000.0 / initbpm;
     qint64 lastEndTime = 0;
-
+    Score temp(initbpm);
+    Track a;
     for (const auto& log : sortedLogs) {
         const std::string& pitch = std::get<0>(log);
         qint64 start = std::get<1>(log);
@@ -171,18 +162,17 @@ void ScoreEditor::savediyscore()
         if (start > lastEndTime) {
             double restDuration = (start - lastEndTime) / quarterNoteMs;
             if (restDuration >= 0.05) { // 可忽略极短休止
-                out << "r " << QString::number(restDuration, 'f', 2) << "\n";
+                a.addNote(new Rest(restDuration));
             }
         }
 
         // 写音符
         double noteDuration = (end - start) / quarterNoteMs;
-        out << "n " << QString::fromStdString(pitch) << " " << QString::number(noteDuration, 'f', 2) << "\n";
-
+        a.addNote(new Note(MidiNote::noteNameToMidi(pitch),noteDuration));
         lastEndTime = end;
     }
-
-    file.close();
+    temp.addTrack(a);
+    temp.save(fileName.toStdString());
 }
 
 void ScoreEditor::startmetronome(const Note& menote)
