@@ -3,40 +3,155 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDebug>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QLabel>
+#include "song.h"
+#include <QScrollArea>
+#include <QSlider>
+#include <QtConcurrent/QtConcurrentRun>
+#include <QThread>
+#include <QGroupBox>
+
+
+const int NOTE_WIDTH = 20;
+const int TRACK_SPACING = 20;
+const int BASE_Y = 20;
+const QColor WHITE_KEY_COLOR = Qt::white;
+const QColor BLACK_KEY_COLOR = Qt::black;
+
+class Note; // 前向声明
+
+// NoteCanvas 实现
+NoteCanvas::NoteCanvas(QWidget *parent) : QWidget(parent) {}
+
+void NoteCanvas::setNotes(const QVector<std::tuple<int, int>>& notes) {
+    m_notes = notes;
+    update();
+}
+
+void NoteCanvas::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // 绘制背景
+    painter.fillRect(rect(), QColor("#f8f8f8"));
+
+    // 绘制音符
+    for (const auto &note : m_notes) {
+        int keyIndex = std::get<0>(note);
+        int x = std::get<1>(note);
+        int y = getNoteY(keyIndex);
+
+        QColor noteColor = (keyIndex < 28) ?
+                               QColor("#2196F3") : QColor("#888888"); // 蓝/灰
+
+        int height = 20;
+        int width = (keyIndex < 28) ? 20 : 16; // 白键宽，黑键窄
+
+        painter.setBrush(noteColor);
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(x, y, width, height, 4, 4);
+
+
+        //QString noteName = PianoKeys::Keytoname(keyIndex);
+        //painter.setPen(Qt::black);
+        //painter.drawText(x + 3, y + 15, noteName);
+    }
+}
+
+int NoteCanvas::getNoteY(int keyIndex) const {
+    // 简化的坐标计算：按音符索引排列
+    return 30 + (keyIndex % 36) * 20; // 每行20像素间距
+}
 
 EditWindow::EditWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle("编辑界面");
     setMinimumSize(1500, 800);
+    score = new Score(); // 初始化 Score 对象
+    currentTrackIndex = 0;
+    notePosition = 0;
+    isopenme = false; // 新增：节拍器开关状态
+    selfbpm = 120; // 新增：节拍器节拍
+    initvolumn = 70; // 新增：节拍器音量
+
     createWidgets();
     setupLayout();
     connectSignals();
 
-
+    if (score && score->gettracksnum() == 0) {
+        score->addTrack(Track()); // 假设 Track 有默认构造函数
+        updateTrackList();
+    }
 }
 
 EditWindow::~EditWindow()
 {
     delete pianoKeys;
     delete trackList;
+    delete score;
 }
 
 void EditWindow::createWidgets()
 {
-    // 左侧音轨列表（C3-C6）
-    trackList = new QListWidget(this);
-    trackList->setFixedWidth(150);
-    trackList->setStyleSheet("border-right: 1px solid #ddd; font-size: 12px;"); // 缩小字体
-    trackList->addItems({
-        "C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3", "G#3", "A3", "A#3", "B3",
-        "C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4",
-        "C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5",
-        "C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6"
-    }); // 包含黑键音名
+    // 左侧音轨管理面板
+    QWidget* trackPanel = new QWidget(this);
+    trackPanel->setFixedWidth(200);
+    trackPanel->setStyleSheet("background-color: #f0f0f0;");
+
+    // 音轨列表
+    trackList = new QListWidget(trackPanel);
+    trackList->setStyleSheet("font-size: 12px;");
+
+    // 音轨操作按钮
+    addTrackButton = new QPushButton("添加音轨", trackPanel);
+    removeTrackButton = new QPushButton("删除音轨", trackPanel);
+    addTrackButton->setStyleSheet("background-color: #4CAF50; color: white;");
+    removeTrackButton->setStyleSheet("background-color: #FF4444; color: white;");
+
+    // 音轨控制面板布局
+    QVBoxLayout* trackLayout = new QVBoxLayout(trackPanel);
+    trackLayout->addWidget(new QLabel("音轨管理", trackPanel));
+    trackLayout->addWidget(trackList);
+    trackLayout->addWidget(addTrackButton);
+    trackLayout->addWidget(removeTrackButton);
+
+    // 新增：节拍器控制
+    QGroupBox *tempoGroup = new QGroupBox("节奏", this);
+    QHBoxLayout *tempoLayout = new QHBoxLayout(tempoGroup);
+    QLabel *tempoLabel = new QLabel("120 BPM", this);
+    QSlider *tempoSlider = new QSlider(Qt::Horizontal, this);
+    tempoSlider->setRange(40, 200);
+    tempoSlider->setValue(120);
+    tempoLayout->addWidget(new QLabel("慢", this));
+    tempoLayout->addWidget(tempoSlider);
+    tempoLayout->addWidget(new QLabel("快", this));
+    tempoLayout->addWidget(tempoLabel);
+    trackLayout->addWidget(tempoGroup);
+
+    QGroupBox *volumeGroup = new QGroupBox("音量", this);
+    QHBoxLayout *volumeLayout = new QHBoxLayout(volumeGroup);
+    QLabel *volumeLabel = new QLabel("70%", this);
+    QSlider *volumeSlider = new QSlider(Qt::Horizontal, this);
+    volumeSlider->setRange(0, 100);
+    volumeSlider->setValue(70);
+    volumeLayout->addWidget(new QLabel("静音", this));
+    volumeLayout->addWidget(volumeSlider);
+    volumeLayout->addWidget(new QLabel("最大", this));
+    volumeLayout->addWidget(volumeLabel);
+    trackLayout->addWidget(volumeGroup);
+
+    QPushButton *metronomeButton = new QPushButton("节拍器", this);
+    trackLayout->addWidget(metronomeButton);
 
     // 中间瀑布流画布
-    QWidget *canvas = new QWidget(this);
+    canvas = new NoteCanvas(this);
     canvas->setStyleSheet("#canvas { background: #f8f8f8; }");
+
+    // 让画布能够接收绘制事件
+    canvas->setAttribute(Qt::WA_OpaquePaintEvent);
 
     // 底部钢琴键
     pianoKeys = new PianoKeys(this);
@@ -50,7 +165,7 @@ void EditWindow::createWidgets()
 
     // 新增底部按钮
     exitButton = new QPushButton("退出主界面", this);
-    playButton = new QPushButton("开始播放", this);
+    playButton = new QPushButton("开始录制", this);
     saveButton = new QPushButton("保存乐谱", this);
     exitButton->setStyleSheet("background-color: #FF4444; color: white;");
     playButton->setStyleSheet("background-color: #4CAF50; color: white;");
@@ -59,12 +174,17 @@ void EditWindow::createWidgets()
     // 主布局
     QVBoxLayout *mainLayout = new QVBoxLayout();
     QHBoxLayout *topLayout = new QHBoxLayout();
-    topLayout->addWidget(trackList);
-    topLayout->addWidget(canvas, 1);
 
-    QVBoxLayout *canvasLayout = new QVBoxLayout(canvas);
-    canvasLayout->addStretch();
-    canvasLayout->addWidget(pianoKeys);
+    topLayout->addWidget(trackPanel);
+    //topLayout->addWidget(canvas, 1);
+
+    // 右侧画布区域（使用 scrollArea 确保音符不会被遮挡）
+    QScrollArea *scrollArea = new QScrollArea(this);
+    scrollArea->setWidget(canvas);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    topLayout->addWidget(scrollArea, 1);  // 占据剩余空间
 
     // 底部按钮布局
     QHBoxLayout *buttonLayout = new QHBoxLayout();
@@ -74,11 +194,26 @@ void EditWindow::createWidgets()
     buttonLayout->addWidget(saveButton);
 
     mainLayout->addLayout(topLayout, 1);
+    mainLayout->addWidget(pianoKeys);  // 将钢琴键添加到主布局
     mainLayout->addLayout(buttonLayout);
 
     QWidget *centralWidget = new QWidget();
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
+
+    // 连接滑块信号到显示更新
+    connect(tempoSlider, &QSlider::valueChanged, [tempoLabel, this](int value) {
+        tempoLabel->setText(QString("%1 BPM").arg(value));
+        selfbpm = value;
+    });
+
+    connect(volumeSlider, &QSlider::valueChanged, [volumeLabel, this](int value) {
+        volumeLabel->setText(QString("%1%").arg(value));
+        initvolumn = value;
+    });
+
+    // 连接节拍器按钮
+    connect(metronomeButton, &QPushButton::clicked, this, &EditWindow::startmebutton_clicked);
 }
 
 void EditWindow::setupLayout()
@@ -91,15 +226,30 @@ void EditWindow::connectSignals()
     connect(exitButton, &QPushButton::clicked, this, &EditWindow::exitToMain);
     connect(playButton, &QPushButton::clicked, this, &EditWindow::startPlayback);
     connect(saveButton, &QPushButton::clicked, this, &EditWindow::saveScore);
+
+    // 音轨管理信号连接
+    connect(addTrackButton, &QPushButton::clicked, this, &EditWindow::addTrack);
+    connect(removeTrackButton, &QPushButton::clicked, this, &EditWindow::removeCurrentTrack);
+    connect(trackList, &QListWidget::currentRowChanged, this, &EditWindow::switchTrack);
 }
 
 void EditWindow::onPianoKeyPressed(int keyIndex)
 {
-    //if (keyIndex >= 28) return;
+    if (!score) return;
+
+    // 创建新的音符
+    Note* newNote = new Note(keyIndex, 1.0, 90);
+    // 将音符添加到当前音轨
+    score->gettrackbyn(currentTrackIndex).addNote(newNote);
 
     notes.append({keyIndex, notePosition});
     notePosition += NOTE_WIDTH + 5; // 减小间隔为5像素
-    update(); // 重绘瀑布流
+
+    canvas->setNotes(notes);
+    updateCanvasSize(); // 确保调用此函数
+    if (scrollArea) {
+        scrollArea->ensureVisible(notePosition, 0, 50, 0);
+    }
 }
 
 void EditWindow::onPianoKeyReleased(int keyIndex)
@@ -121,46 +271,30 @@ void EditWindow::updateNoteVisual(int keyIndex, bool isPressed)
     }
 }
 
-void EditWindow::paintEvent(QPaintEvent *event)
-{
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
 
-    // 绘制左侧分割线
-    painter.drawLine(trackList->width(), 0, trackList->width(), height());
 
-    // 绘制音符
+
+void EditWindow::updateCanvasSize() {
+    if (!canvas || notes.isEmpty()) return;
+
+    // 计算最大X坐标
+    int maxX = 0;
     for (const auto &[keyIndex, x] : notes) {
-        int y = getTrackY(keyIndex);
-        QColor noteColor = (keyIndex < 28) ? WHITE_KEY_COLOR : BLACK_KEY_COLOR; // 白键/黑键颜色区分
+        maxX = qMax(maxX, x + NOTE_WIDTH);
+    }
 
-        // 绘制音符矩形（黑键音符宽度略窄，视觉上位于两白键中间）
-        int noteWidth = (keyIndex < 28) ? NOTE_WIDTH : NOTE_WIDTH * 0.8; // 黑键音符宽度为白键的80%
-        painter.fillRect(x, y, noteWidth, TRACK_SPACING * 1.5, noteColor);
+    // 设置画布大小（宽度+边距，高度足够显示所有音符）
+    canvas->setMinimumSize(maxX + 100, 800);
+    canvas->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-        // 绘制音名（黑键显示带#的音名）
-        QKeySequence keySequence = pianoKeys->keyMap.key(keyIndex);
-        std::string noteNameStd = pianoKeys->keytoname.value(keySequence);
-        QString noteName = QString::fromStdString(noteNameStd);
-        painter.drawText(x + 2, y + 10, noteName);
+    // 确保滚动区域更新
+    if (scrollArea) {
+        scrollArea->updateGeometry();
     }
 }
 
-int EditWindow::getTrackY(int keyIndex)
-{
-    // 4个八度共28个白键，每个音轨间隔20像素
-    //return BASE_Y + keyIndex * TRACK_SPACING;
 
-    int octaveIndex = keyIndex / 12; // 0=C3八度，1=C4八度，2=C5八度，3=C6八度
-    int keyInOctave = keyIndex % 12; // 0-11（0-6为白键，7-11为黑键）
 
-    // 白键垂直位置：每个白键间隔20像素
-    // 黑键垂直位置：位于两个白键之间，偏移10像素
-    int whiteKeyY = BASE_Y + (keyInOctave % 7) * TRACK_SPACING; // 白键在八度内的位置（0-6）
-    int blackKeyY = whiteKeyY + TRACK_SPACING / 2; // 黑键位于两白键中间
-
-    return octaveIndex * (TRACK_SPACING * 7) + (keyInOctave < 7 ? whiteKeyY : blackKeyY);
-}
 
 void EditWindow::exitToMain()
 {
@@ -169,14 +303,108 @@ void EditWindow::exitToMain()
     }
     this->close(); // 关闭当前窗口
 }
+
 void EditWindow::startPlayback()
 {
-    qDebug() << "开始播放乐谱";
+    qDebug() << "开始录制";
     // 播放逻辑
+    score->play();
 }
 
 void EditWindow::saveScore()
 {
     qDebug() << "保存乐谱到文件";
     // 保存逻辑
+    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.mid)");
+    if (!filePath.isEmpty()) {
+        score->save(filePath.toStdString());
+        QMessageBox::information(this, "保存成功", "乐谱已成功保存。");
+    }
+}
+
+void EditWindow::updateTrackList()
+{
+    trackList->clear();
+    if (!score) return;
+
+    for (int i = 0; i < score->gettracksnum(); ++i) {
+        trackList->addItem(QString("音轨 %1").arg(i + 1));
+    }
+
+    // 保持当前选中状态
+    if (score->gettracksnum() > 0) {
+        trackList->setCurrentRow(currentTrackIndex);
+    }
+}
+
+void EditWindow::addTrack()
+{
+    if (!score) return;
+
+    score->addTrack(Track()); // 添加新音轨
+    updateTrackList();
+
+    // 切换到新添加的音轨
+    currentTrackIndex = score->gettracksnum() - 1;
+    switchTrack(currentTrackIndex);
+}
+
+void EditWindow::removeCurrentTrack()
+{
+    if (!score || score->gettracksnum() <= 1) return; // 至少保留一条音轨
+
+    score->gettrackbyn(currentTrackIndex).clear(); // 清空当前音轨
+    //score->gettracks().erase(score->gettracks().begin() + currentTrackIndex); // 删除音轨
+
+    // 切换到第一条音轨
+    currentTrackIndex = 0;
+    updateTrackList();
+    switchTrack(currentTrackIndex);
+}
+
+void EditWindow::switchTrack(int index)
+{
+    if (!score || index < 0 || index >= score->gettracksnum()) return;
+
+    currentTrackIndex = index;
+
+    // 从 Score 中加载当前音轨的音符
+    notes.clear();
+    Track& currentTrack = score->gettrackbyn(currentTrackIndex);
+    for (int i = 0; i < currentTrack.getnotesnum(); ++i) {
+        MidiNote* note = currentTrack.getnotesbyn(i);
+        notes.append({note->getpitch(), notePosition});
+        notePosition += NOTE_WIDTH + 5;
+    }
+
+    // 更新 notePosition 为最后一个音符的位置
+    if (!notes.isEmpty()) {
+        notePosition = std::get<1>(notes.last()) + NOTE_WIDTH + 5;
+    } else {
+        notePosition = 0;
+    }
+
+    canvas->setNotes(notes);
+    updateCanvasSize();
+}
+
+void EditWindow::startmetronome(const Note& menote)
+{
+    while (isopenme) {
+        // 可以在这里播放节拍声（Beep、QSound、或 pianoKeys->playClickSound()）
+        menote.constplay(midiOut, selfbpm, initvolumn); // 使用调整后的音量
+        qDebug() << "tick";
+        QThread::msleep(60000 / selfbpm); // 按当前 BPM 延时
+    }
+}
+
+void EditWindow::startmebutton_clicked()
+{
+    isopenme = !isopenme;
+    if (isopenme) {
+        Note menote(77, 0.25);
+        QtConcurrent::run([this, menote]() {
+            this->startmetronome(menote);
+        });
+    }
 }
