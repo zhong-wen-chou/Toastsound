@@ -14,11 +14,6 @@
 #include <QGroupBox>
 #include <QStackedWidget>
 
-#include <QSpinBox>
-#include <QDialog>
-#include <QFormLayout>
-#include <QDialogButtonBox>
-
 const int NOTE_WIDTH = 20;
 const int TRACK_SPACING = 20;
 const int BASE_Y = 20;
@@ -28,22 +23,43 @@ const QColor BLACK_KEY_COLOR = Qt::black;
 //class Note;
 
 // NoteCanvas 实现
-NoteCanvas::NoteCanvas(QWidget *parent) : QWidget(parent) {}
+NoteCanvas::NoteCanvas(QWidget *parent) : QWidget(parent) {
+    edittimer.start();
 
+    refreshTimer = new QTimer(this);
+    connect(refreshTimer, &QTimer::timeout, this, QOverload<>::of(&NoteCanvas::update));
+    refreshTimer->start(16);  // 大约 60FPS
+}
+/*
 void NoteCanvas::setNotes(const QVector<std::tuple<int, int>>& notes) {
     m_notes = notes;
     update();
+}*/
+
+void NoteCanvas::addNote(int keyIndex, qint64 startTime) {
+    NoteBlocks.append({keyIndex, startTime, -1, true});
+    //lastNotePosition = position + NOTE_WIDTH + 5;
+    //update();
+    //updateCanvasSize();
 }
 
-void NoteCanvas::addNote(int keyIndex, int position) {
-    m_notes.append({keyIndex, position});
-    lastNotePosition = position + NOTE_WIDTH + 5;
-    update();
-    updateCanvasSize();
+void NoteCanvas::releaseNote(int keyIndex, qint64 endTime) {
+    for (NoteBlock &note : NoteBlocks) {
+        if (note.pitch == keyIndex && note.active) {
+            note.endTime = endTime;
+            note.active = false;
+            break;
+        }
+    }
 }
+
+qint64 NoteCanvas::currentTime() const {
+    return edittimer.elapsed();
+}
+
 
 void NoteCanvas::clearNotes() {
-    m_notes.clear();
+    NoteBlocks.clear();
     lastNotePosition = 0;
     update();
 }
@@ -51,7 +67,7 @@ void NoteCanvas::clearNotes() {
 int NoteCanvas::getLastNotePosition() const {
     return lastNotePosition;
 }
-
+/*
 void NoteCanvas::updateCanvasSize() {
     if (m_notes.isEmpty()) {
         setMinimumSize(0, 800);
@@ -67,7 +83,7 @@ void NoteCanvas::updateCanvasSize() {
     // 设置画布大小
     setMinimumSize(maxX + 100, 800);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-}
+}*/
 
 void NoteCanvas::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event);
@@ -76,23 +92,31 @@ void NoteCanvas::paintEvent(QPaintEvent *event) {
 
     // 绘制背景
     painter.fillRect(rect(), QColor("#f8f8f8"));
-
+    qint64 currentTime = edittimer.elapsed();
     // 绘制音符
-    for (const auto &note : m_notes) {
-        int keyIndex = std::get<0>(note);
-        int x = std::get<1>(note);
+    for (const auto &note : NoteBlocks) {
+        qint64 start = note.startTime;
+        qint64 end = note.active ? currentTime : note.endTime;
+        if (end < currentTime - viewDuration)
+            continue;
+        int keyIndex = note.pitch;
+        int x_start = width() - (currentTime - start) * pixelsPerMs;
+        int x_end = width() - (currentTime - end) * pixelsPerMs;
+        //int x = std::get<1>(note);
         int y = getNoteY(keyIndex);
 
-        QColor noteColor = (keyIndex < 28) ?
-                               QColor("#2196F3") : QColor("#888888");
+        //QColor noteColor = (keyIndex < 28) ? QColor("#2196F3") : QColor("#888888");
 
-        int height = 20;
-        int width = (keyIndex < 28) ? 20 : 16;
-
-        painter.setBrush(noteColor);
+        int height = 30;
+        //int width = (keyIndex < 28) ? 20 : 16;
+        int width=qMax(1, x_end - x_start);
+        painter.setBrush(note.active ? QColor("#00BCD4") : QColor("#2196F3"));
         painter.setPen(Qt::NoPen);
-        painter.drawRoundedRect(x, y, width, height, 4, 4);
+        painter.drawRoundedRect(x_start, y, width, height, 4, 4);
     }
+    // 当前时间线
+    painter.setPen(QColor("#FF5252"));
+    painter.drawLine(width() - 2, 0, width() - 2, height());
 }
 
 int NoteCanvas::getNoteY(int keyIndex) const {
@@ -190,9 +214,12 @@ void EditWindow::createWidgets()
 
     // 底部钢琴键
     pianoKeys = new PianoKeys(this);
-    pianoKeys->setKeyPressCallback([this](int keyIndex,int midinum) {
-        onPianoKeyPressed(keyIndex,midinum);
+    pianoKeys->setKeyPressCallback([this](int keyIndex) {
+        onPianoKeyPressed(keyIndex);
         updateNoteVisual(keyIndex, true);
+    });
+    pianoKeys->setKeyReleaseCallback([this](int keyIndex) {
+        onPianoKeyReleased(keyIndex);
     });
 
     // 底部按钮
@@ -262,26 +289,37 @@ void EditWindow::connectSignals()
     connect(trackList, &QListWidget::currentRowChanged, this, &EditWindow::switchTrack);
 }
 
-void EditWindow::onPianoKeyPressed(int keyIndex,int midinum)
+
+void EditWindow::onPianoKeyPressed(int keyIndex)
 {
     if (!score || currentTrackIndex >= canvases.size()) return;
 
+
     // 创建新的音符
-    Note* newNote = new Note(midinum, 1.0, 90);
-    score->gettrackbyn(currentTrackIndex).addNote(newNote);
+    //Note* newNote = new Note(keyIndex, 1.0, 90);
+    //score->gettrackbyn(currentTrackIndex).addNote(newNote);
+
 
     // 获取当前音轨的画布
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
 
     // 获取当前画布的音符位置
-    int position = currentCanvas->getLastNotePosition();
+    //int position = currentCanvas->getLastNotePosition();
 
     // 添加音符到当前画布
-    currentCanvas->addNote(keyIndex, position);
+    currentCanvas->addNote(keyIndex, currentCanvas->currentTime());
 }
+
 
 void EditWindow::onPianoKeyReleased(int keyIndex)
 {
+    // 创建新的音符
+    Note* newNote = new Note(keyIndex, 1.0, 90);
+    score->gettrackbyn(currentTrackIndex).addNote(newNote);
+
+    NoteCanvas* currentCanvas = canvases[currentTrackIndex];
+    currentCanvas->releaseNote(keyIndex, currentCanvas->currentTime());
+
     updateNoteVisual(keyIndex, false);
 }
 
@@ -319,46 +357,20 @@ void EditWindow::startPlayback()
 void EditWindow::saveScore()
 {
     qDebug() << "保存乐谱到文件";
-    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.txt)");
+    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.mid)");
     if (!filePath.isEmpty()) {
         score->save(filePath.toStdString());
         QMessageBox::information(this, "保存成功", "乐谱已成功保存。");
     }
 }
 
-void EditWindow::updateTrackList() {
+void EditWindow::updateTrackList()
+{
     trackList->clear();
     if (!score) return;
 
     for (int i = 0; i < score->gettracksnum(); ++i) {
-        // 创建自定义的widget作为列表项
-        QWidget *itemWidget = new QWidget();
-        QHBoxLayout *layout = new QHBoxLayout(itemWidget);
-        layout->setContentsMargins(5, 2, 5, 2);
-
-        QLabel *label = new QLabel(QString("音轨 %1").arg(i + 1));
-        QPushButton *settingsButton = new QPushButton("编辑");
-        settingsButton->setFixedSize(50, 20);
-        settingsButton->setStyleSheet("font-size: 10px;");
-
-        // 存储音轨索引作为按钮属性
-        settingsButton->setProperty("trackIndex", i);
-
-        layout->addWidget(label);
-        layout->addWidget(settingsButton);
-        layout->addStretch();
-
-        // 创建列表项
-        QListWidgetItem *item = new QListWidgetItem();
-        item->setSizeHint(itemWidget->sizeHint());
-
-        trackList->addItem(item);
-        trackList->setItemWidget(item, itemWidget);
-
-        // 连接按钮信号
-        connect(settingsButton, &QPushButton::clicked, [this, i]() {
-            this->showTrackSettings(i);
-        });
+        trackList->addItem(QString("音轨 %1").arg(i + 1));
     }
 
     if (score->gettracksnum() > 0) {
@@ -394,8 +406,6 @@ void EditWindow::removeCurrentTrack()
     }*/
 
     // 移除当前音轨的画布
-    if(canvases.empty())
-        return;
     NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
     stackedWidget->removeWidget(canvasToRemove);
     delete canvasToRemove;
@@ -418,8 +428,6 @@ void EditWindow::switchTrack(int index)
 
     // 切换到当前音轨的画布
     stackedWidget->setCurrentIndex(index);
-    //发送消息更改0通道音色
-    score->gettrackbyn(index).sendprogrammessage();
 }
 
 void EditWindow::startmetronome(const Note& menote)
@@ -441,59 +449,3 @@ void EditWindow::startmebutton_clicked()
         });
     }
 }
-
-
-void EditWindow::showTrackSettings(int trackIndex) {
-    if (!score || trackIndex < 0 || trackIndex >= score->gettracksnum()) return;
-
-    // 创建设置对话框
-    QDialog dialog(this);
-    dialog.setWindowTitle(QString("音轨 %1 设置").arg(trackIndex + 1));
-
-    QFormLayout layout(&dialog);
-
-    // 通道选择 (0-15)
-    QSpinBox *channelSpinBox = new QSpinBox(&dialog);
-    channelSpinBox->setRange(0, 15);
-    channelSpinBox->setValue(score->gettrackbyn(trackIndex).getchannel());
-
-    // 音色选择 (0-127)
-    QSpinBox *programSpinBox = new QSpinBox(&dialog);
-    programSpinBox->setRange(0, 127);
-    programSpinBox->setValue(score->gettrackbyn(trackIndex).getprogram());
-
-    // 音色名称映射 (可选)
-    QMap<int, QString> programNames = {
-        {0, "大钢琴"}, {1, "明亮钢琴"}, {2, "电钢琴"},
-        // 可以添加更多音色名称...
-        {40, "小提琴"}, {41, "中提琴"}, {42, "大提琴"}
-    };
-
-    QLabel *programNameLabel = new QLabel(&dialog);
-    programNameLabel->setText(programNames.value(programSpinBox->value(), "自定义音色"));
-
-    // 连接音色值变化信号
-    connect(programSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
-        programNameLabel->setText(programNames.value(value, "自定义音色"));
-    });
-
-    layout.addRow("通道 (0-15):", channelSpinBox);
-    layout.addRow("音色 (0-127):", programSpinBox);
-    layout.addRow("音色名称:", programNameLabel);
-
-    // 确认和取消按钮
-    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
-                               Qt::Horizontal, &dialog);
-    layout.addRow(&buttonBox);
-
-    connect(&buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(&buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-
-    if (dialog.exec() == QDialog::Accepted) {
-        // 保存设置
-        score->gettrackbyn(trackIndex).setchannel(channelSpinBox->value());
-        score->gettrackbyn(trackIndex).setprogram(programSpinBox->value());
-        score->gettrackbyn(trackIndex).sendprogrammessage();
-    }
-}
-
