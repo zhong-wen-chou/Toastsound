@@ -58,6 +58,7 @@ private slots:
     void onPianoKeyReleased(int keyIndex,int midinum);
     void exitToMain();
     void startPlayback();
+    void stopRecording();
     void saveScore();
 
     void updateTrackList();
@@ -73,6 +74,7 @@ private:
     void setupLayout();
     void updateNoteVisual(int keyIndex, bool isPressed);
     void connectSignals();
+    void showTrackSettings(int trackIndex);
 
     PianoKeys *pianoKeys;
     QListWidget *trackList;
@@ -87,6 +89,7 @@ private:
     int currentTrackIndex = 0;
     int selfbpm;
     bool isopenme = false;
+    bool isRecording = false;
 };
 
 #endif // EDITWINDOW_H

@@ -7,9 +7,12 @@
 #include<iostream>
 #include<fstream>
 #include <atomic>
+#include<Qmap>
 #include "RtMidi.h"
 
 extern RtMidiOut midiOut;
+extern QMap<int,QString> programToName;
+
 
 struct TimedMessage {
     int timestamp;  // 优先级依据

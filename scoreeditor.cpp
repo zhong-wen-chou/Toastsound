@@ -155,8 +155,8 @@ void ScoreEditor::savediyscore()
     Track a;
     for (const auto& log : sortedLogs) {
         const std::string& pitch = std::get<0>(log);
-        qint64 start = std::get<1>(log);
-        qint64 end = std::get<2>(log);
+        qint64 start = std::get<2>(log);
+        qint64 end = std::get<1>(log);
 
         // 如果两个音符之间有空隙，加休止符
         if (start > lastEndTime) {

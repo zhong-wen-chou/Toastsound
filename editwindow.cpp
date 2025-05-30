@@ -13,6 +13,10 @@
 #include <QThread>
 #include <QGroupBox>
 #include <QStackedWidget>
+#include <QSpinBox>
+#include <QDialog>
+#include <QFormLayout>
+#include <QDialogButtonBox>
 
 const int NOTE_WIDTH = 20;
 const int TRACK_SPACING = 20;
@@ -294,12 +298,6 @@ void EditWindow::onPianoKeyPressed(int keyIndex)
 {
     if (!score || currentTrackIndex >= canvases.size()) return;
 
-
-    // 创建新的音符
-    //Note* newNote = new Note(keyIndex, 1.0, 90);
-    //score->gettrackbyn(currentTrackIndex).addNote(newNote);
-
-
     // 获取当前音轨的画布
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
 
@@ -313,10 +311,6 @@ void EditWindow::onPianoKeyPressed(int keyIndex)
 
 void EditWindow::onPianoKeyReleased(int keyIndex,int midinum)
 {
-    // 创建新的音符
-    Note* newNote = new Note(midinum, 1.0, 90);
-    score->gettrackbyn(currentTrackIndex).addNote(newNote);
-
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
     currentCanvas->releaseNote(keyIndex, currentCanvas->currentTime());
 
@@ -343,15 +337,73 @@ void EditWindow::exitToMain()
         parentWidget()->show();
     }
     this->close();
+    //以防万一，恢复通道0音色
+    std::vector<unsigned char> programChange;
+    programChange.push_back(0xC0 | 0); // Program Change
+    programChange.push_back(0);
+    midiOut.sendMessage(&programChange);
 }
 
 void EditWindow::startPlayback()
 {
-    qDebug() << "开始录制";
-    isstart = true;
-    keyLogs.clear();
-    qDebug() << "计时器已启动";
-    timer.restart();
+    if (!isRecording) {
+        // 开始录制
+        isRecording = true;
+        playButton->setText("结束录制");
+        playButton->setStyleSheet("background-color: #FF4444; color: white;");
+
+        qDebug() << "开始录制";
+        isstart = true;
+        keyLogs.clear();
+        qDebug() << "计时器已启动";
+        timer.restart();
+    } else {
+        // 已经是录制状态，调用停止录制
+        stopRecording();
+    }
+}
+
+void EditWindow::stopRecording()
+{
+    if (isRecording) {
+        // 结束录制
+        isRecording = false;
+        playButton->setText("开始录制");
+        playButton->setStyleSheet("background-color: #4CAF50; color: white;");
+
+        qDebug() << "结束录制";
+        isstart = false;
+
+        // 保存录制的数据
+        QVector<std::tuple<std::string, qint64, qint64>> sortedLogs = keyLogs;
+        std::sort(sortedLogs.begin(), sortedLogs.end(), [](const auto& a, const auto& b) {
+            return std::get<1>(a) < std::get<1>(b); // 按开始时间排序
+        });
+
+
+        double quarterNoteMs = 60000.0 / initbpm;
+        qint64 lastEndTime = 0;
+        Track& a=score->gettrackbyn(currentTrackIndex);
+
+        for (const auto& log : sortedLogs) {
+            const std::string& pitch = std::get<0>(log);
+            qint64 start = std::get<2>(log);
+            qint64 end = std::get<1>(log);
+
+            // 如果两个音符之间有空隙，加休止符
+            if (start > lastEndTime) {
+                double restDuration = (start - lastEndTime) / quarterNoteMs;
+                if (restDuration >= 0.05) { // 可忽略极短休止
+                    a.addNote(new Rest(restDuration));
+                }
+            }
+
+            // 写音符
+            double noteDuration = (end - start) / quarterNoteMs;
+            a.addNote(new Note(MidiNote::noteNameToMidi(pitch),noteDuration));
+            lastEndTime = end;
+        }
+    }
 }
 
 void EditWindow::saveScore()
@@ -370,7 +422,34 @@ void EditWindow::updateTrackList()
     if (!score) return;
 
     for (int i = 0; i < score->gettracksnum(); ++i) {
-        trackList->addItem(QString("音轨 %1").arg(i + 1));
+        // 创建自定义的widget作为列表项Add commentMore actions
+        QWidget *itemWidget = new QWidget();
+        QHBoxLayout *layout = new QHBoxLayout(itemWidget);
+        layout->setContentsMargins(5, 2, 5, 2);
+
+            QLabel *label = new QLabel(QString("音轨 %1").arg(i + 1));
+        QPushButton *settingsButton = new QPushButton("编辑");
+        settingsButton->setFixedSize(50, 20);
+        settingsButton->setStyleSheet("font-size: 10px;");
+
+        // 存储音轨索引作为按钮属性
+        settingsButton->setProperty("trackIndex", i);
+
+        layout->addWidget(label);
+        layout->addWidget(settingsButton);
+        layout->addStretch();
+
+        // 创建列表项
+        QListWidgetItem *item = new QListWidgetItem();
+        item->setSizeHint(itemWidget->sizeHint());
+
+        trackList->addItem(item);
+        trackList->setItemWidget(item, itemWidget);
+
+        // 连接按钮信号
+        connect(settingsButton, &QPushButton::clicked, [this, i]() {
+            this->showTrackSettings(i);
+        });
     }
 
     if (score->gettracksnum() > 0) {
@@ -430,6 +509,12 @@ void EditWindow::switchTrack(int index)
 
     // 切换到当前音轨的画布
     stackedWidget->setCurrentIndex(index);
+    //发送消息更改0通道音色
+    score->gettrackbyn(index).sendprogrammessage();
+    //如果没有结束录制就自动结束录制
+    if(isRecording){
+        stopRecording();
+    }
 }
 
 void EditWindow::startmetronome(const Note& menote)
@@ -449,5 +534,53 @@ void EditWindow::startmebutton_clicked()
         QtConcurrent::run([this, menote]() {
             this->startmetronome(menote);
         });
+    }
+}
+
+void EditWindow::showTrackSettings(int trackIndex) {
+        if (!score || trackIndex < 0 || trackIndex >= score->gettracksnum()) return;
+
+    // 创建设置对话框
+    QDialog dialog(this);
+    dialog.setWindowTitle(QString("音轨 %1 设置").arg(trackIndex + 1));
+
+    QFormLayout layout(&dialog);
+
+    // 通道选择 (0-15)
+    QSpinBox *channelSpinBox = new QSpinBox(&dialog);
+    channelSpinBox->setRange(0, 15);
+    channelSpinBox->setValue(score->gettrackbyn(trackIndex).getchannel());
+
+    // 音色选择 (0-127)
+    QSpinBox *programSpinBox = new QSpinBox(&dialog);
+    programSpinBox->setRange(0, 127);
+    programSpinBox->setValue(score->gettrackbyn(trackIndex).getprogram());
+
+    QLabel *programNameLabel = new QLabel(&dialog);
+    programNameLabel->setText(programToName.value(programSpinBox->value(), "自定义音色"));
+
+    // 连接音色值变化信号
+    connect(programSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
+        programNameLabel->setText(programToName.value(value, "自定义音色"));
+    });
+
+
+    layout.addRow("通道 (0-15):", channelSpinBox);
+    layout.addRow("音色 (0-127):", programSpinBox);
+    layout.addRow("音色名称:", programNameLabel);
+
+    // 确认和取消按钮
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    layout.addRow(&buttonBox);
+
+    connect(&buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(&buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        // 保存设置
+        score->gettrackbyn(trackIndex).setchannel(channelSpinBox->value());
+        score->gettrackbyn(trackIndex).setprogram(programSpinBox->value());
+        score->gettrackbyn(trackIndex).sendprogrammessage();
     }
 }
