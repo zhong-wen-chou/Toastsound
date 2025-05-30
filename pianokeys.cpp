@@ -171,6 +171,10 @@ void PianoKeys::initKeytoname()
 
 void PianoKeys::keyPressEvent(QKeyEvent *event)
 {
+    if (event->isAutoRepeat()) {
+        // 忽略重复按键事件
+        return;
+    }
     if (keyMap.contains(event->key())) {
         int keyIndex=keyMap[event->key()];
         if(isstart){
@@ -179,7 +183,8 @@ void PianoKeys::keyPressEvent(QKeyEvent *event)
         int midinum= MidiNote::noteNameToMidi(keytoname[event->key()]);
         qDebug()<<keytoname[event->key()];
         updateKeyVisual(keyIndex, true);
-        Note tmpnote(midinum);
+        Note tmpnote(midinum,100.0);
+        //tmpnote.play(midiOut,selfbpm);
         tmpnote.NoteOn(midiOut);
         if (keyCallback) keyCallback(keyIndex); // 触发回调函数
         event->accept();
@@ -188,10 +193,14 @@ void PianoKeys::keyPressEvent(QKeyEvent *event)
 
 void PianoKeys::keyReleaseEvent(QKeyEvent *event)
 {
+    if (event->isAutoRepeat()) {
+        // 忽略重复释放事件
+        return;
+    }
     if (keyMap.contains(event->key())) {
         int keyIndex = keyMap[event->key()];
         int midinum= MidiNote::noteNameToMidi(keytoname[event->key()]);
-        Note tmpnote(midinum);
+        Note tmpnote(midinum,100.0);
         tmpnote.NoteOff(midiOut);
         if(isstart){
             noteend=timer.elapsed();  // 返回毫秒数
