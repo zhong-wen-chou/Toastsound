@@ -2,47 +2,46 @@
 #include "mainwindow.h" // 用于返回主界面
 #include "song.h"
 #include <QFileDialog>
-#include <QtConcurrent>
+#include <QtConcurrent/QtConcurrentRun>
+#include <QGroupBox>
+#include <QScrollArea>
+
+
 
 LoadWindow::LoadWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle("读取界面");
-    setMinimumSize(1500, 600); // 与编曲界面保持一致的宽度
+    setMinimumSize(1500, 800); // 增加高度以适应新布局
     createWidgets();
     setupLayout();
     connectSignals();
+
+    // 添加初始音轨
+    addTrack();
 }
 
 LoadWindow::~LoadWindow()
 {
-    delete pianoKeys;
+    qDeleteAll(canvases);
 }
 
 void LoadWindow::createWidgets()
 {
-    // 左侧按钮列
-    /*
-    leftButtonLayout = new QVBoxLayout();
-    returnButton = new QPushButton("返回", this);
-    returnButton->setMinimumSize(150, 50);
-    returnButton->setStyleSheet("background-color: #FF4444; color: white; border-radius: 8px;");
+    // 音轨列表
+    trackList = new QListWidget(this);
 
-    selectAudioButton = new QPushButton("选择播放音频", this);
-    selectAudioButton->setMinimumSize(150, 50);
-    selectAudioButton->setStyleSheet("background-color: #165DFF; color: white; border-radius: 8px;");
+    // 音轨操作按钮
+    addTrackButton = new QPushButton("添加音轨", this);
+    removeTrackButton = new QPushButton("删除音轨", this);
+    addTrackButton->setMinimumSize(120, 40);
+    removeTrackButton->setMinimumSize(120, 40);
+    addTrackButton->setStyleSheet("background-color: #4CAF50; color: white; border-radius: 8px;");
+    removeTrackButton->setStyleSheet("background-color: #FF4444; color: white; border-radius: 8px;");
 
-    leftButtonLayout->addWidget(returnButton);
-    leftButtonLayout->addWidget(selectAudioButton);
-    leftButtonLayout->setSpacing(20);
-    leftButtonLayout->setContentsMargins(20, 20, 0, 0);
-    */
+    // 使用堆栈窗口管理多个画布
+    stackedWidget = new QStackedWidget(this);
 
-    // 右侧钢琴键组件
-    pianoKeys = new PianoKeys(this);
-
-    // 底部按钮栏
-    bottomButtonLayout = new QHBoxLayout();
-
+    // 底部按钮
     returnButton = new QPushButton("返回", this);
     returnButton->setMinimumSize(120, 50);
     returnButton->setStyleSheet("background-color: #FF4444; color: white; border-radius: 8px;");
@@ -69,15 +68,6 @@ void LoadWindow::createWidgets()
     volumeSlider->setValue(70);
     volumeSlider->setStyleSheet("margin: 0 20px;");
     volumeSlider->hide();
-
-    bottomButtonLayout->addWidget(returnButton);
-    bottomButtonLayout->addWidget(selectAudioButton);
-    bottomButtonLayout->addWidget(playButton);
-    bottomButtonLayout->addWidget(stopButton);
-    bottomButtonLayout->addWidget(volumeButton);
-    bottomButtonLayout->addWidget(volumeSlider);
-    bottomButtonLayout->setSpacing(15);
-    bottomButtonLayout->setContentsMargins(20, 20, 20, 20);
 }
 
 void LoadWindow::setupLayout()
@@ -85,20 +75,46 @@ void LoadWindow::setupLayout()
     QWidget *centralWidget = new QWidget(this);
     QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
 
-    // 左侧按钮区域
-    QWidget *leftWidget = new QWidget();
-    leftWidget->setLayout(leftButtonLayout);
-    mainLayout->addWidget(leftWidget, 1); // 左侧占1份宽度
+    // 左侧音轨管理面板
+    QWidget* trackPanel = new QWidget();
+    trackPanel->setFixedWidth(200);
+    trackPanel->setStyleSheet("background-color: #f0f0f0; padding: 10px;");
 
-    // 右侧钢琴键区域
+    QVBoxLayout* trackPanelLayout = new QVBoxLayout(trackPanel);
+    trackPanelLayout->addWidget(new QLabel("音轨管理", trackPanel));
+    trackPanelLayout->addWidget(trackList);
+    trackPanelLayout->addWidget(addTrackButton);
+    trackPanelLayout->addWidget(removeTrackButton);
+    trackPanelLayout->addStretch();
+
+    // 右侧音符显示区域
+    QScrollArea *scrollArea = new QScrollArea(this);
+    scrollArea->setWidget(stackedWidget);
+    scrollArea->setWidgetResizable(true);
+
+    // 底部按钮栏
+    QHBoxLayout *bottomButtonLayout = new QHBoxLayout();
+    bottomButtonLayout->addWidget(returnButton);
+    bottomButtonLayout->addWidget(selectAudioButton);
+    bottomButtonLayout->addWidget(playButton);
+    bottomButtonLayout->addWidget(stopButton);
+    bottomButtonLayout->addWidget(volumeButton);
+    bottomButtonLayout->addWidget(volumeSlider);
+    bottomButtonLayout->setSpacing(15);
+    bottomButtonLayout->setContentsMargins(20, 10, 20, 20);
+
+    // 主布局
     QVBoxLayout *rightLayout = new QVBoxLayout();
-    rightLayout->addWidget(pianoKeys, 1);
+    rightLayout->addWidget(scrollArea, 1);
     rightLayout->addLayout(bottomButtonLayout);
 
     QWidget *rightWidget = new QWidget();
     rightWidget->setLayout(rightLayout);
-    mainLayout->addWidget(rightWidget, 4); // 右侧占4份宽度
 
+    mainLayout->addWidget(trackPanel);
+    mainLayout->addWidget(rightWidget, 1);
+
+    centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
 }
 
@@ -109,8 +125,11 @@ void LoadWindow::connectSignals()
     connect(selectAudioButton, &QPushButton::clicked, this, &LoadWindow::selectAudio);
     connect(playButton, &QPushButton::clicked, this, &LoadWindow::beginplay);
     connect(stopButton, &QPushButton::clicked, this, &LoadWindow::stopplay);
+    connect(addTrackButton, &QPushButton::clicked, this, &LoadWindow::addTrack);
+    connect(removeTrackButton, &QPushButton::clicked, this, &LoadWindow::removeCurrentTrack);
+    connect(trackList, &QListWidget::currentRowChanged, this, &LoadWindow::switchTrack);
 
-    // 音量滑块联动（可扩展为实际音量控制）
+    // 音量滑块
     connect(volumeSlider, &QSlider::valueChanged, [this](int value) {
         qDebug() << "当前音量：" << value << "%";
     });
@@ -118,7 +137,6 @@ void LoadWindow::connectSignals()
 
 void LoadWindow::onReturnToMain()
 {
-    // 返回主界面
     hide();
     MainWindow *mainWindow = qobject_cast<MainWindow*>(parent());
     if (mainWindow) {
@@ -128,11 +146,8 @@ void LoadWindow::onReturnToMain()
 
 void LoadWindow::showVolumeControl()
 {
-    // 切换音量滑块可见状态
     isVolumeVisible = !isVolumeVisible;
     volumeSlider->setVisible(isVolumeVisible);
-
-    // 调整按钮文本（可选）
     volumeButton->setText(isVolumeVisible ? "隐藏音量" : "音量");
 }
 
@@ -145,18 +160,29 @@ void LoadWindow::selectAudio()
         "MIDI Files (*.mid *.txt *.mscore);;All Files (*)"
         );
 
-    // 如果用户选了文件
     if (!fileName.isEmpty()) {
         qDebug() << "准备加载文件：" << fileName;
 
         try {
-            score.load(fileName.toStdString()); // 你的加载函数
+            score.load(fileName.toStdString());
             qDebug() << "文件加载成功";
-            //score.play();
+
+            // 清空现有画布
+            while (!canvases.isEmpty()) {
+                NoteCanvas* canvas = canvases.takeLast();
+                stackedWidget->removeWidget(canvas);
+                delete canvas;
+            }
+
+            // 为每个音轨创建画布
+            for (int i = 0; i < score.gettracksnum(); i++) {
+                addTrack();
+                // TODO: 将音符数据添加到画布
+            }
+
         } catch (const std::exception& e) {
             qDebug() << "异常：" << e.what();
         }
-
     } else {
         qDebug() << "用户取消了文件选择";
     }
@@ -170,4 +196,49 @@ void LoadWindow::beginplay(){
 
 void LoadWindow::stopplay(){
     score.stop();
+}
+
+void LoadWindow::addTrack()
+{
+    score.addTrack(Track());
+
+    // 创建新画布
+    NoteCanvas* newCanvas = new NoteCanvas();
+    canvases.append(newCanvas);
+    stackedWidget->addWidget(newCanvas);
+
+    // 更新音轨列表
+    trackList->addItem(QString("音轨 %1").arg(trackList->count() + 1));
+    trackList->setCurrentRow(trackList->count() - 1);
+    currentTrackIndex = trackList->count() - 1;
+}
+
+void LoadWindow::removeCurrentTrack()
+{
+    if (trackList->count() <= 1) return; // 至少保留一个音轨
+
+    // 从堆栈中移除画布
+    NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
+    stackedWidget->removeWidget(canvasToRemove);
+    delete canvasToRemove;
+
+    // 从score中移除音轨
+    score.removetrack(currentTrackIndex);
+
+    // 更新音轨列表
+    delete trackList->takeItem(currentTrackIndex);
+
+    // 调整当前音轨索引
+    if (currentTrackIndex >= trackList->count()) {
+        currentTrackIndex = trackList->count() - 1;
+    }
+    trackList->setCurrentRow(currentTrackIndex);
+}
+
+void LoadWindow::switchTrack(int index)
+{
+    if (index >= 0 && index < stackedWidget->count()) {
+        currentTrackIndex = index;
+        stackedWidget->setCurrentIndex(index);
+    }
 }

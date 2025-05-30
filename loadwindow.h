@@ -2,12 +2,15 @@
 #define LOADWINDOW_H
 
 #include <QMainWindow>
-#include "pianokeys.h"
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSlider>
+#include <QListWidget>
+#include <QStackedWidget>
 #include "song.h"
+#include "editwindow.h"
+
 
 class LoadWindow : public QMainWindow
 {
@@ -23,6 +26,9 @@ private slots:
     void selectAudio();
     void beginplay();
     void stopplay();
+    void addTrack();        // 添加音轨
+    void removeCurrentTrack(); // 删除当前音轨
+    void switchTrack(int index); // 切换音轨
 
 private:
     void createWidgets(); // 创建控件
@@ -30,18 +36,22 @@ private:
     void connectSignals();// 连接信号
 
     Score score;
-    QVBoxLayout *leftButtonLayout = nullptr;
-    QHBoxLayout *bottomButtonLayout = nullptr;
+    QListWidget *trackList; // 音轨列表
+    QStackedWidget *stackedWidget; // 堆栈窗口管理多个画布
+    QList<NoteCanvas*> canvases; // 每个音轨对应的画布
 
-    PianoKeys *pianoKeys; // 钢琴键组件
+    // 按钮
     QPushButton *returnButton; // 返回按钮
     QPushButton *selectAudioButton; // 选择音频按钮
     QPushButton *playButton; // 开始播放按钮
     QPushButton *stopButton; // 中止按钮
     QPushButton *volumeButton; // 音量按钮
+    QPushButton *addTrackButton; // 添加音轨按钮
+    QPushButton *removeTrackButton; // 删除音轨按钮
 
     QSlider *volumeSlider; // 音量滑块（隐藏，点击按钮时显示）
     bool isVolumeVisible = false; // 音量滑块可见状态
+    int currentTrackIndex = 0; // 当前音轨索引
 };
 
 #endif // LOADWINDOW_H
