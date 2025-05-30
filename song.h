@@ -238,6 +238,14 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Track& a);
     friend std::istream& operator>>(std::istream& is, Track& a);
 
+    //发送设置音色消息(由于已经写的代码的原因，默认修改0通道而不是当前通道，因为软件里的键盘是用的0通道)
+    void sendprogrammessage(int n=0){
+        std::vector<unsigned char> programChange;
+        programChange.push_back(0xC0 | n); // Program Change
+        programChange.push_back(program);
+        midiOut.sendMessage(&programChange);
+    }
+
     //获取和编辑数据的方法
     int getchannel() const{
         return channel;

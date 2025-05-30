@@ -58,6 +58,7 @@ private:
     void setupLayout();
     void updateNoteVisual(int keyIndex, bool isPressed);
     void connectSignals();
+    void showTrackSettings(int trackIndex);
 
     PianoKeys *pianoKeys;
     QListWidget *trackList;

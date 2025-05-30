@@ -14,6 +14,11 @@
 #include <QGroupBox>
 #include <QStackedWidget>
 
+#include <QSpinBox>
+#include <QDialog>
+#include <QFormLayout>
+#include <QDialogButtonBox>
+
 const int NOTE_WIDTH = 20;
 const int TRACK_SPACING = 20;
 const int BASE_Y = 20;
@@ -321,13 +326,39 @@ void EditWindow::saveScore()
     }
 }
 
-void EditWindow::updateTrackList()
-{
+void EditWindow::updateTrackList() {
     trackList->clear();
     if (!score) return;
 
     for (int i = 0; i < score->gettracksnum(); ++i) {
-        trackList->addItem(QString("音轨 %1").arg(i + 1));
+        // 创建自定义的widget作为列表项
+        QWidget *itemWidget = new QWidget();
+        QHBoxLayout *layout = new QHBoxLayout(itemWidget);
+        layout->setContentsMargins(5, 2, 5, 2);
+
+        QLabel *label = new QLabel(QString("音轨 %1").arg(i + 1));
+        QPushButton *settingsButton = new QPushButton("编辑");
+        settingsButton->setFixedSize(50, 20);
+        settingsButton->setStyleSheet("font-size: 10px;");
+
+        // 存储音轨索引作为按钮属性
+        settingsButton->setProperty("trackIndex", i);
+
+        layout->addWidget(label);
+        layout->addWidget(settingsButton);
+        layout->addStretch();
+
+        // 创建列表项
+        QListWidgetItem *item = new QListWidgetItem();
+        item->setSizeHint(itemWidget->sizeHint());
+
+        trackList->addItem(item);
+        trackList->setItemWidget(item, itemWidget);
+
+        // 连接按钮信号
+        connect(settingsButton, &QPushButton::clicked, [this, i]() {
+            this->showTrackSettings(i);
+        });
     }
 
     if (score->gettracksnum() > 0) {
@@ -387,6 +418,8 @@ void EditWindow::switchTrack(int index)
 
     // 切换到当前音轨的画布
     stackedWidget->setCurrentIndex(index);
+    //发送消息更改0通道音色
+    score->gettrackbyn(index).sendprogrammessage();
 }
 
 void EditWindow::startmetronome(const Note& menote)
@@ -408,3 +441,59 @@ void EditWindow::startmebutton_clicked()
         });
     }
 }
+
+
+void EditWindow::showTrackSettings(int trackIndex) {
+    if (!score || trackIndex < 0 || trackIndex >= score->gettracksnum()) return;
+
+    // 创建设置对话框
+    QDialog dialog(this);
+    dialog.setWindowTitle(QString("音轨 %1 设置").arg(trackIndex + 1));
+
+    QFormLayout layout(&dialog);
+
+    // 通道选择 (0-15)
+    QSpinBox *channelSpinBox = new QSpinBox(&dialog);
+    channelSpinBox->setRange(0, 15);
+    channelSpinBox->setValue(score->gettrackbyn(trackIndex).getchannel());
+
+    // 音色选择 (0-127)
+    QSpinBox *programSpinBox = new QSpinBox(&dialog);
+    programSpinBox->setRange(0, 127);
+    programSpinBox->setValue(score->gettrackbyn(trackIndex).getprogram());
+
+    // 音色名称映射 (可选)
+    QMap<int, QString> programNames = {
+        {0, "大钢琴"}, {1, "明亮钢琴"}, {2, "电钢琴"},
+        // 可以添加更多音色名称...
+        {40, "小提琴"}, {41, "中提琴"}, {42, "大提琴"}
+    };
+
+    QLabel *programNameLabel = new QLabel(&dialog);
+    programNameLabel->setText(programNames.value(programSpinBox->value(), "自定义音色"));
+
+    // 连接音色值变化信号
+    connect(programSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
+        programNameLabel->setText(programNames.value(value, "自定义音色"));
+    });
+
+    layout.addRow("通道 (0-15):", channelSpinBox);
+    layout.addRow("音色 (0-127):", programSpinBox);
+    layout.addRow("音色名称:", programNameLabel);
+
+    // 确认和取消按钮
+    QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+                               Qt::Horizontal, &dialog);
+    layout.addRow(&buttonBox);
+
+    connect(&buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(&buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        // 保存设置
+        score->gettrackbyn(trackIndex).setchannel(channelSpinBox->value());
+        score->gettrackbyn(trackIndex).setprogram(programSpinBox->value());
+        score->gettrackbyn(trackIndex).sendprogrammessage();
+    }
+}
+
