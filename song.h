@@ -332,6 +332,9 @@ public:
             tracks.erase(tracks.begin() + index);
         }
     }
+    void cleartrack(int index){
+        tracks[index].clear();
+    }
 };
 /*
 extern Track Metronome;//节拍器
