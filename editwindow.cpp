@@ -272,8 +272,6 @@ void EditWindow::updateNoteVisual(int keyIndex, bool isPressed)
 }
 
 
-
-
 void EditWindow::updateCanvasSize() {
     if (!canvas || notes.isEmpty()) return;
 
@@ -294,8 +292,6 @@ void EditWindow::updateCanvasSize() {
 }
 
 
-
-
 void EditWindow::exitToMain()
 {
     if (parentWidget()) {
@@ -308,7 +304,10 @@ void EditWindow::startPlayback()
 {
     qDebug() << "开始录制";
     // 播放逻辑
-    score->play();
+    isstart=true;
+    keyLogs.clear(); // 清除旧记录
+    qDebug() << "计时器已启动";
+    timer.restart();
 }
 
 void EditWindow::saveScore()
@@ -355,7 +354,7 @@ void EditWindow::removeCurrentTrack()
 
     score->gettrackbyn(currentTrackIndex).clear(); // 清空当前音轨
     //score->gettracks().erase(score->gettracks().begin() + currentTrackIndex); // 删除音轨
-
+    score->removetrack(currentTrackIndex);
     // 切换到第一条音轨
     currentTrackIndex = 0;
     updateTrackList();
