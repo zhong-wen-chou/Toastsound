@@ -363,6 +363,8 @@ void EditWindow::removeCurrentTrack()
     }*/
 
     // 移除当前音轨的画布
+    if(canvases.empty())
+        return;
     NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
     stackedWidget->removeWidget(canvasToRemove);
     delete canvasToRemove;
