@@ -31,14 +31,16 @@ public:
         qint64 endTime;        // 若正在演奏，则为 -1 或设为当前时间
         bool active;           // 是否还在按下状态
     };
+    bool ispause=false; // 前五秒是否抬起手
+    qint64 tmptime; // 暂时储存前5秒的pause时间
+    QElapsedTimer edittimer;
 
 protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
     QVector<NoteBlock> NoteBlocks;
-    int getNoteY(int keyIndex) const;
-    QElapsedTimer edittimer;
+    int getNoteY(int keyIndex) const;    
     QTimer *refreshTimer;
     //QMap<QString, int> pitchToY;  // 映射 pitch 到 y 轴
     //qint64 viewWindowMs = 8000;   // 当前窗口显示过去 8 秒
