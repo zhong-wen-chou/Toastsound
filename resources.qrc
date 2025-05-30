@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>pictures/toust.png</file>
+        <file>pictures/mainbackgroud.png</file>
+        <file>pictures/images.png</file>
+        <file>pictures/download.png</file>
+        <file>pictures/toust_icon.png</file>
+    </qresource>
+</RCC>
