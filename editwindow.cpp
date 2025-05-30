@@ -17,6 +17,7 @@
 #include <QDialog>
 #include <QFormLayout>
 #include <QDialogButtonBox>
+#include <Qpainter>
 
 const int NOTE_WIDTH = 20;
 const int TRACK_SPACING = 20;
@@ -104,14 +105,22 @@ void NoteCanvas::paintEvent(QPaintEvent *event) {
         if (end < currentTime - viewDuration)
             continue;
         int keyIndex = note.pitch;
-        int x_start = width() - (currentTime - start) * pixelsPerMs;
-        int x_end = width() - (currentTime - end) * pixelsPerMs;
+        int x_start;
+        int x_end;
+        if(currentTime<5000.0){
+            x_start = (currentTime/5000.0)*0.618*width() - (currentTime - start) * 0.3;
+            x_end = (currentTime/5000.0)*0.618*width() - (currentTime - end) * 0.3;
+        }
+        else{
+            x_start = 0.618*width() - (currentTime - start) * 0.3;
+            x_end = 0.618*width() - (currentTime - end) * 0.3;
+        }
         //int x = std::get<1>(note);
         int y = getNoteY(keyIndex);
 
         //QColor noteColor = (keyIndex < 28) ? QColor("#2196F3") : QColor("#888888");
 
-        int height = 30;
+        int height = 40;
         //int width = (keyIndex < 28) ? 20 : 16;
         int width=qMax(1, x_end - x_start);
         painter.setBrush(note.active ? QColor("#00BCD4") : QColor("#2196F3"));
@@ -119,12 +128,20 @@ void NoteCanvas::paintEvent(QPaintEvent *event) {
         painter.drawRoundedRect(x_start, y, width, height, 4, 4);
     }
     // 当前时间线
-    painter.setPen(QColor("#FF5252"));
-    painter.drawLine(width() - 2, 0, width() - 2, height());
+    //painter.setPen(QColor("#FF5252"));
+
+    QPen pen(Qt::black);       // 线条颜色
+    pen.setWidth(4);           // 设置线条宽度为 4 像素
+    painter.setPen(pen);       // 将画笔设置给 painter
+
+    if(currentTime<5000.0){
+        painter.drawLine((currentTime/5000.0)*0.618*width(), 0, (currentTime/5000.0)*0.618*width(), height());
+    }
+    else painter.drawLine(0.618*width(), 0, 0.618*width(), height());
 }
 
 int NoteCanvas::getNoteY(int keyIndex) const {
-    return 30 + (keyIndex % 36) * 20;
+    return height()-(30 + (keyIndex % 36) * 20);
 }
 
 EditWindow::EditWindow(QWidget *parent) : QMainWindow(parent)
@@ -140,7 +157,7 @@ EditWindow::EditWindow(QWidget *parent) : QMainWindow(parent)
     createWidgets();
     setupLayout();
     connectSignals();
-/*
+    /*
     if (score && score->gettracksnum() == 0) {
         score->addTrack(Track());
         // 为第一个音轨创建画布
@@ -427,7 +444,7 @@ void EditWindow::updateTrackList()
         QHBoxLayout *layout = new QHBoxLayout(itemWidget);
         layout->setContentsMargins(5, 2, 5, 2);
 
-            QLabel *label = new QLabel(QString("音轨 %1").arg(i + 1));
+        QLabel *label = new QLabel(QString("音轨 %1").arg(i + 1));
         QPushButton *settingsButton = new QPushButton("编辑");
         settingsButton->setFixedSize(50, 20);
         settingsButton->setStyleSheet("font-size: 10px;");
@@ -486,7 +503,7 @@ void EditWindow::removeCurrentTrack()
 
     // 移除当前音轨的画布
     if(canvases.empty())
-            return;
+        return;
     NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
     stackedWidget->removeWidget(canvasToRemove);
     delete canvasToRemove;
@@ -538,7 +555,7 @@ void EditWindow::startmebutton_clicked()
 }
 
 void EditWindow::showTrackSettings(int trackIndex) {
-        if (!score || trackIndex < 0 || trackIndex >= score->gettracksnum()) return;
+    if (!score || trackIndex < 0 || trackIndex >= score->gettracksnum()) return;
 
     // 创建设置对话框
     QDialog dialog(this);
