@@ -186,7 +186,7 @@ void PianoKeys::keyPressEvent(QKeyEvent *event)
         Note tmpnote(midinum,100.0);
         //tmpnote.play(midiOut,selfbpm);
         tmpnote.NoteOn(midiOut);
-        if (keyCallback) keyCallback(keyIndex); // 触发回调函数
+        if (keyCallback) keyCallback(keyIndex,midinum); // 触发回调函数
         event->accept();
     }
 }
@@ -227,7 +227,7 @@ void PianoKeys::updateKeyVisual(int keyIndex, bool isPressed)
     }
 }
 
-void PianoKeys::setKeyPressCallback(std::function<void(int)> callback)
+void PianoKeys::setKeyPressCallback(std::function<void(int,int)> callback)
 {
     keyCallback = callback;
 }

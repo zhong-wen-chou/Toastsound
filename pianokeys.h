@@ -21,7 +21,7 @@ class PianoKeys : public QWidget
 
 public:
     explicit PianoKeys(QWidget *parent = nullptr);
-    void setKeyPressCallback(std::function<void(int)> callback); // 设置按键回调函数
+    void setKeyPressCallback(std::function<void(int,int)> callback); // 设置按键回调函数
 
     QList<QPushButton*> whiteKeys;  // 28个白键列表
     QList<QPushButton*> blackKeys;  // 20个黑键列表
@@ -39,7 +39,7 @@ private:
     QMap<QKeySequence, int> keyMap; // 键盘按键到琴键的映射
     QMap<QKeySequence,std::string>keytoname;//键盘按键到音名的映射
     **/
-    std::function<void(int)> keyCallback; // 按键回调函数
+    std::function<void(int,int)> keyCallback; // 按键回调函数
 
     void initKeyMap();
     void initKeytoname();

@@ -185,8 +185,8 @@ void EditWindow::createWidgets()
 
     // 底部钢琴键
     pianoKeys = new PianoKeys(this);
-    pianoKeys->setKeyPressCallback([this](int keyIndex) {
-        onPianoKeyPressed(keyIndex);
+    pianoKeys->setKeyPressCallback([this](int keyIndex,int midinum) {
+        onPianoKeyPressed(keyIndex,midinum);
         updateNoteVisual(keyIndex, true);
     });
 
@@ -257,12 +257,12 @@ void EditWindow::connectSignals()
     connect(trackList, &QListWidget::currentRowChanged, this, &EditWindow::switchTrack);
 }
 
-void EditWindow::onPianoKeyPressed(int keyIndex)
+void EditWindow::onPianoKeyPressed(int keyIndex,int midinum)
 {
     if (!score || currentTrackIndex >= canvases.size()) return;
 
     // 创建新的音符
-    Note* newNote = new Note(keyIndex, 1.0, 90);
+    Note* newNote = new Note(midinum, 1.0, 90);
     score->gettrackbyn(currentTrackIndex).addNote(newNote);
 
     // 获取当前音轨的画布
@@ -314,7 +314,7 @@ void EditWindow::startPlayback()
 void EditWindow::saveScore()
 {
     qDebug() << "保存乐谱到文件";
-    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.mid)");
+    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.txt)");
     if (!filePath.isEmpty()) {
         score->save(filePath.toStdString());
         QMessageBox::information(this, "保存成功", "乐谱已成功保存。");

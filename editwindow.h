@@ -39,7 +39,7 @@ public:
     ~EditWindow();
 
 private slots:
-    void onPianoKeyPressed(int keyIndex);
+    void onPianoKeyPressed(int keyIndex,int midinum);
     void onPianoKeyReleased(int keyIndex);
     void exitToMain();
     void startPlayback();
