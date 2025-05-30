@@ -391,7 +391,7 @@ void EditWindow::startmetronome(const Note& menote)
 {
     while (isopenme) {
         // 可以在这里播放节拍声（Beep、QSound、或 pianoKeys->playClickSound()）
-        menote.constplay(midiOut, selfbpm, initvolumn); // 使用调整后的音量
+        menote.constplay(midiOut, selfbpm, 9); // 使用调整后的音量
         qDebug() << "tick";
         QThread::msleep(60000 / selfbpm); // 按当前 BPM 延时
     }
