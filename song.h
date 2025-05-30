@@ -202,6 +202,23 @@ public:
             notes.push_back(note->clone());
         }
     }
+    // 拷贝赋值运算符（深拷贝）
+    Track& operator=(const Track& other) {
+        if (this != &other) {
+            // 先清理原来的 notes
+            clear();
+
+            // 拷贝基本成员
+            channel = other.channel;
+            program = other.program;
+
+            // 深拷贝 notes
+            for (const MidiNote* note : other.notes) {
+                notes.push_back(note->clone());
+            }
+        }
+        return *this;
+    }
     void addNote(MidiNote* note) {
         notes.push_back(note);
     }
@@ -233,16 +250,6 @@ public:
             return notes[n];
         }
         return NULL;
-    }
-    void deletenotebyn(int n){
-        if(n<notes.size()){
-            notes.erase(notes.begin()+n);
-        }
-    }
-    void insertnotebyn(int n,MidiNote* pnote){
-        if(n<notes.size()){
-            notes.insert(notes.begin(),pnote);
-        }
     }
     void clear() {
         for (auto& note : notes) {
@@ -282,13 +289,9 @@ public:
     }
 
     void play();
-    void restart();            //重新播放
     void stop();               // 停止播放
     void save(std::string s);//保存文件到s,s是路径
     void load(std::string s);//加载s文件
-    void clear(){//清空tracks
-        tracks.clear();
-    }
 
     friend std::ostream& operator<<(std::ostream& os, const Score& a);
     friend std::istream& operator>>(std::istream& is, Score& a);
@@ -309,6 +312,11 @@ public:
         }
         else {
             throw std::out_of_range("Index out of range");
+        }
+    }
+    void removetrack(int index){
+        if (index >= 0 && index < tracks.size()) {
+            tracks.erase(tracks.begin() + index);
         }
     }
 };
