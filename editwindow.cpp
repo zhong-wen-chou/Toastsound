@@ -130,14 +130,18 @@ void NoteCanvas::paintEvent(QPaintEvent *event) {
     // 当前时间线
     //painter.setPen(QColor("#FF5252"));
 
-    QPen pen(Qt::black);       // 线条颜色
-    pen.setWidth(4);           // 设置线条宽度为 4 像素
-    painter.setPen(pen);       // 将画笔设置给 painter
-
     if(currentTime<5000.0){
+        QPen pen(Qt::red);       // 线条颜色
+        pen.setWidth(4);           // 设置线条宽度为 4 像素
+        painter.setPen(pen);       // 将画笔设置给 painter
         painter.drawLine((currentTime/5000.0)*0.618*width(), 0, (currentTime/5000.0)*0.618*width(), height());
     }
-    else painter.drawLine(0.618*width(), 0, 0.618*width(), height());
+    else {
+        QPen pen(Qt::black);       // 线条颜色
+        pen.setWidth(4);           // 设置线条宽度为 4 像素
+        painter.setPen(pen);       // 将画笔设置给 painter
+        painter.drawLine(0.618*width(), 0, 0.618*width(), height());
+    }
 }
 
 int NoteCanvas::getNoteY(int keyIndex) const {
@@ -317,7 +321,11 @@ void EditWindow::onPianoKeyPressed(int keyIndex)
 
     // 获取当前音轨的画布
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
-
+    if(currentCanvas->ispause){
+        currentCanvas->ispause=false;
+        currentCanvas->edittimer.restart();
+        currentCanvas->clearNotes();
+    }
     // 获取当前画布的音符位置
     //int position = currentCanvas->getLastNotePosition();
 
@@ -331,6 +339,10 @@ void EditWindow::onPianoKeyReleased(int keyIndex,int midinum)
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
     currentCanvas->releaseNote(keyIndex, currentCanvas->currentTime());
 
+    if(currentCanvas->currentTime()<5000.0){
+        currentCanvas->ispause=true;
+        currentCanvas->tmptime=currentCanvas->currentTime();
+    }
     updateNoteVisual(keyIndex, false);
 }
 
