@@ -107,7 +107,7 @@ EditWindow::EditWindow(QWidget *parent) : QMainWindow(parent)
     createWidgets();
     setupLayout();
     connectSignals();
-
+/*
     if (score && score->gettracksnum() == 0) {
         score->addTrack(Track());
         // 为第一个音轨创建画布
@@ -116,6 +116,7 @@ EditWindow::EditWindow(QWidget *parent) : QMainWindow(parent)
         stackedWidget->addWidget(canvas);
         updateTrackList();
     }
+*/
 }
 
 EditWindow::~EditWindow()
@@ -354,7 +355,12 @@ void EditWindow::addTrack()
 
 void EditWindow::removeCurrentTrack()
 {
-    if (!score || score->gettracksnum() <= 1) return;
+    /*
+    if (!score || score->gettracksnum() <= 1) {
+        score->cleartrack(currentTrackIndex);
+        stackedWidget->setCurrentIndex(currentTrackIndex);
+        return;
+    }*/
 
     // 移除当前音轨的画布
     NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
