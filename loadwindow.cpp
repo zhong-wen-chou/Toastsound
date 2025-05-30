@@ -176,8 +176,23 @@ void LoadWindow::selectAudio()
 
             // 为每个音轨创建画布
             for (int i = 0; i < score.gettracksnum(); i++) {
-                addTrack();
-                // TODO: 将音符数据添加到画布
+                // 创建新画布
+                NoteCanvas* newCanvas = new NoteCanvas();
+                canvases.append(newCanvas);
+                stackedWidget->addWidget(newCanvas);
+
+                // 更新音轨列表
+                trackList->addItem(QString("音轨 %1").arg(trackList->count() + 1));
+                trackList->setCurrentRow(trackList->count() - 1);
+                currentTrackIndex = trackList->count() - 1;
+                //对该音轨进行绘制
+                Track& temp=score.gettrackbyn(i);
+                for(int u=0;u<temp.getnotesnum();u++){
+                    MidiNote* pnote=temp.getnotesbyn(u);
+                    //根据该音符的音高pitch时长duration在画布对应位置画出色块
+                    //待完成
+                }
+
             }
 
         } catch (const std::exception& e) {
