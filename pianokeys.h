@@ -28,7 +28,6 @@ public:
     QMap<QKeySequence, int> keyMap; // 键盘按键到琴键的映射
     QMap<QKeySequence,std::string>keytoname;//键盘按键到音名的映射
 
-protected:
     void keyPressEvent(QKeyEvent *event) override;  // 键盘事件处理
     void keyReleaseEvent(QKeyEvent *event) override; // 键盘释放事件处理
 
@@ -48,7 +47,7 @@ private:
     void setupLayout();          // 布局管理
     void updateKeyVisual(int keyIndex, bool isPressed); // 更新琴键视觉状态
 
-    void createBlackKey(int whiteIndex, int octave, int blackKeyWidth, int blackKeyHeight, int blackKeyYOffset); // 新增函数声明
+    void createBlackKey(int positionIndex, int leftWhiteIndex);
     int whiteKeyWidth = 0;
 };
 
