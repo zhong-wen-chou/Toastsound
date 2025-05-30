@@ -218,8 +218,8 @@ void EditWindow::createWidgets()
         onPianoKeyPressed(keyIndex);
         updateNoteVisual(keyIndex, true);
     });
-    pianoKeys->setKeyReleaseCallback([this](int keyIndex) {
-        onPianoKeyReleased(keyIndex);
+    pianoKeys->setKeyReleaseCallback([this](int keyIndex,int midinum) {
+        onPianoKeyReleased(keyIndex,midinum);
     });
 
     // 底部按钮
@@ -311,10 +311,10 @@ void EditWindow::onPianoKeyPressed(int keyIndex)
 }
 
 
-void EditWindow::onPianoKeyReleased(int keyIndex)
+void EditWindow::onPianoKeyReleased(int keyIndex,int midinum)
 {
     // 创建新的音符
-    Note* newNote = new Note(keyIndex, 1.0, 90);
+    Note* newNote = new Note(midinum, 1.0, 90);
     score->gettrackbyn(currentTrackIndex).addNote(newNote);
 
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
@@ -357,7 +357,7 @@ void EditWindow::startPlayback()
 void EditWindow::saveScore()
 {
     qDebug() << "保存乐谱到文件";
-    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.mid)");
+    QString filePath = QFileDialog::getSaveFileName(this, "保存乐谱", "", "MIDI Files (*.txt)");
     if (!filePath.isEmpty()) {
         score->save(filePath.toStdString());
         QMessageBox::information(this, "保存成功", "乐谱已成功保存。");
@@ -406,6 +406,8 @@ void EditWindow::removeCurrentTrack()
     }*/
 
     // 移除当前音轨的画布
+    if(canvases.empty())
+            return;
     NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
     stackedWidget->removeWidget(canvasToRemove);
     delete canvasToRemove;

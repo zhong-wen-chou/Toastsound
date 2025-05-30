@@ -55,7 +55,7 @@ public:
 
 private slots:
     void onPianoKeyPressed(int keyIndex);
-    void onPianoKeyReleased(int keyIndex);
+    void onPianoKeyReleased(int keyIndex,int midinum);
     void exitToMain();
     void startPlayback();
     void saveScore();

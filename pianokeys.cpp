@@ -207,7 +207,7 @@ void PianoKeys::keyReleaseEvent(QKeyEvent *event)
             keyLogs.append(std::make_tuple(keytoname[event->key()], noteend,notebegin));
         }
         updateKeyVisual(keyIndex, false);
-        if (keyReleaseCallback) keyReleaseCallback(keyIndex); // 触发回调函数
+        if (keyReleaseCallback) keyReleaseCallback(keyIndex,midinum); // 触发回调函数
         event->accept();
     }
 }
@@ -232,6 +232,6 @@ void PianoKeys::setKeyPressCallback(std::function<void(int)> callback) {
     keyPressCallback = callback;
 }
 
-void PianoKeys::setKeyReleaseCallback(std::function<void(int)> callback) {
+void PianoKeys::setKeyReleaseCallback(std::function<void(int,int)> callback) {
     keyReleaseCallback = callback;
 }
