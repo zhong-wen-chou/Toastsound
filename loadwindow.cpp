@@ -44,11 +44,11 @@ void LoadWindow::createWidgets()
     bottomButtonLayout = new QHBoxLayout();
 
     returnButton = new QPushButton("返回", this);
-    returnButton->setMinimumSize(150, 50);
+    returnButton->setMinimumSize(120, 50);
     returnButton->setStyleSheet("background-color: #FF4444; color: white; border-radius: 8px;");
 
     selectAudioButton = new QPushButton("选择播放音频", this);
-    selectAudioButton->setMinimumSize(150, 50);
+    selectAudioButton->setMinimumSize(120, 50);
     selectAudioButton->setStyleSheet("background-color: #165DFF; color: white; border-radius: 8px;");
 
     playButton = new QPushButton("开始播放", this);
