@@ -321,11 +321,12 @@ void EditWindow::onPianoKeyPressed(int keyIndex)
 
     // 获取当前音轨的画布
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
+    /*
     if(currentCanvas->ispause){
         currentCanvas->ispause=false;
         currentCanvas->edittimer.restart();
         currentCanvas->clearNotes();
-    }
+    }*/
     // 获取当前画布的音符位置
     //int position = currentCanvas->getLastNotePosition();
 
@@ -338,11 +339,11 @@ void EditWindow::onPianoKeyReleased(int keyIndex,int midinum)
 {
     NoteCanvas* currentCanvas = canvases[currentTrackIndex];
     currentCanvas->releaseNote(keyIndex, currentCanvas->currentTime());
-
-    if(currentCanvas->currentTime()<5000.0){
+    /*
+        if(currentCanvas->currentTime()<5000.0){
         currentCanvas->ispause=true;
         currentCanvas->tmptime=currentCanvas->currentTime();
-    }
+    }*/
     updateNoteVisual(keyIndex, false);
 }
 
