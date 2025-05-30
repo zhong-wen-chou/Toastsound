@@ -208,9 +208,6 @@ void Score::play() {
 void Score::stop(){
     shouldPlay = false;
 }
-void Score::restart(){
-    shouldPlay=true;
-}
 
 void Note::inserttoqueue(std::priority_queue<TimedMessage, std::vector<TimedMessage>, CompareTimedMessage>& pq, int bpm, int channel, int& t) {
     std::vector<unsigned char> message;
@@ -368,7 +365,6 @@ void MultiNote::input(std::istream& is) {
     }
 }
 void Score::load(std::string s) {
-    this->clear();//清除之前的音轨
     std::ifstream fin;
     fin.open(s);
     if (!fin.is_open()) {
