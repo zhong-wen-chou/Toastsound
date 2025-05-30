@@ -21,6 +21,7 @@ LoadWindow::~LoadWindow()
 void LoadWindow::createWidgets()
 {
     // 左侧按钮列
+    /*
     leftButtonLayout = new QVBoxLayout();
     returnButton = new QPushButton("返回", this);
     returnButton->setMinimumSize(150, 50);
@@ -34,12 +35,22 @@ void LoadWindow::createWidgets()
     leftButtonLayout->addWidget(selectAudioButton);
     leftButtonLayout->setSpacing(20);
     leftButtonLayout->setContentsMargins(20, 20, 0, 0);
+    */
 
     // 右侧钢琴键组件
     pianoKeys = new PianoKeys(this);
 
     // 底部按钮栏
     bottomButtonLayout = new QHBoxLayout();
+
+    returnButton = new QPushButton("返回", this);
+    returnButton->setMinimumSize(150, 50);
+    returnButton->setStyleSheet("background-color: #FF4444; color: white; border-radius: 8px;");
+
+    selectAudioButton = new QPushButton("选择播放音频", this);
+    selectAudioButton->setMinimumSize(150, 50);
+    selectAudioButton->setStyleSheet("background-color: #165DFF; color: white; border-radius: 8px;");
+
     playButton = new QPushButton("开始播放", this);
     playButton->setMinimumSize(120, 50);
     playButton->setStyleSheet("background-color: #4CAF50; color: white; border-radius: 8px;");
@@ -59,6 +70,8 @@ void LoadWindow::createWidgets()
     volumeSlider->setStyleSheet("margin: 0 20px;");
     volumeSlider->hide();
 
+    bottomButtonLayout->addWidget(returnButton);
+    bottomButtonLayout->addWidget(selectAudioButton);
     bottomButtonLayout->addWidget(playButton);
     bottomButtonLayout->addWidget(stopButton);
     bottomButtonLayout->addWidget(volumeButton);
@@ -150,7 +163,6 @@ void LoadWindow::selectAudio()
 }
 
 void LoadWindow::beginplay(){
-    score.restart();
     QtConcurrent::run([this]() {
         score.play();
     });
