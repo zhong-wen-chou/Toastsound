@@ -6,6 +6,7 @@
 #include <QGroupBox>
 #include <QScrollArea>
 #include <QPainter>
+#include "song.h"
 
 const int NOTE_WIDTH = 20;
 const int TRACK_SPACING = 20;
@@ -32,8 +33,11 @@ void old_Notecanvas::setNotes(const QVector<std::tuple<int, int, int, QString>>&
 
 void old_Notecanvas::addNote(int keyIndex, int position, int width) {
     // 添加音高文本
-    QString pitchText = QString::number(keyIndex);
+    //QString pitchText = QString::number(keyIndex);
 
+    Note tempNote(keyIndex, 1.0);
+    std::string noteName = tempNote.MidiTonoteName();
+    QString pitchText =QString::fromStdString(noteName);
     // 存储音符信息：音高、位置、宽度、文本
     m_notes.append({keyIndex, position, width, pitchText});
     lastNotePosition = position + width + 5;
@@ -85,22 +89,21 @@ void old_Notecanvas::paintEvent(QPaintEvent *event) {
         QString text = std::get<3>(note);
         int y = getNoteY(keyIndex);
 
-        QColor noteColor = (keyIndex < 28) ?
-                               QColor("#2196F3") : QColor("#888888");
-
-        int height = 20;
+        // 根据音高计算颜色 (HSV模式)
+        int hue = (keyIndex * 3) % 360;  // 每半音增加3度
+        QColor noteColor = QColor::fromHsv(hue, 180, 220); // 固定饱和度和亮度
 
         // 绘制音符矩形
         painter.setBrush(noteColor);
         painter.setPen(Qt::NoPen);
-        painter.drawRoundedRect(x, y, width, height, 4, 4);
+        painter.drawRoundedRect(x, y, width, 20, 4, 4);
 
         // 绘制音高文本
         painter.setPen(Qt::white);
         painter.setFont(QFont("Arial", 8));
 
         // 确保文本在矩形内居中
-        QRect textRect(x, y, width, height);
+        QRect textRect(x, y, width, 20);
         painter.drawText(textRect, Qt::AlignCenter, text);
     }
 }
