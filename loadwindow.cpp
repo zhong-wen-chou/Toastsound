@@ -15,14 +15,28 @@ const QColor BLACK_KEY_COLOR = Qt::black;
 // old_Notecanvas 实现
 old_Notecanvas::old_Notecanvas(QWidget *parent) : QWidget(parent) {}
 
-void old_Notecanvas::setNotes(const QVector<std::tuple<int, int>>& notes) {
+void old_Notecanvas::setNotes(const QVector<std::tuple<int, int, int, QString>>& notes) {
     m_notes = notes;
+
+    // 更新最后一个位置
+    if (!m_notes.isEmpty()) {
+        const auto& lastNote = m_notes.last();
+        lastNotePosition = std::get<1>(lastNote) + std::get<2>(lastNote) + 5;
+    } else {
+        lastNotePosition = 0;
+    }
+
     update();
+    updateCanvasSize();
 }
 
-void old_Notecanvas::addNote(int keyIndex, int position) {
-    m_notes.append({keyIndex, position});
-    lastNotePosition = position + NOTE_WIDTH + 5;
+void old_Notecanvas::addNote(int keyIndex, int position, int width) {
+    // 添加音高文本
+    QString pitchText = QString::number(keyIndex);
+
+    // 存储音符信息：音高、位置、宽度、文本
+    m_notes.append({keyIndex, position, width, pitchText});
+    lastNotePosition = position + width + 5;
     update();
     updateCanvasSize();
 }
@@ -45,8 +59,8 @@ void old_Notecanvas::updateCanvasSize() {
 
     // 计算最大X坐标
     int maxX = 0;
-    for (const auto &[keyIndex, x] : m_notes) {
-        maxX = qMax(maxX, x + NOTE_WIDTH);
+    for (const auto &[keyIndex, x, width, text] : m_notes) {
+        maxX = qMax(maxX, x + width);
     }
 
     // 设置画布大小
@@ -58,6 +72,7 @@ void old_Notecanvas::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event);
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
 
     // 绘制背景
     painter.fillRect(rect(), QColor("#f8f8f8"));
@@ -66,22 +81,42 @@ void old_Notecanvas::paintEvent(QPaintEvent *event) {
     for (const auto &note : m_notes) {
         int keyIndex = std::get<0>(note);
         int x = std::get<1>(note);
+        int width = std::get<2>(note);
+        QString text = std::get<3>(note);
         int y = getNoteY(keyIndex);
 
         QColor noteColor = (keyIndex < 28) ?
                                QColor("#2196F3") : QColor("#888888");
 
         int height = 20;
-        int width = (keyIndex < 28) ? 20 : 16;
 
+        // 绘制音符矩形
         painter.setBrush(noteColor);
         painter.setPen(Qt::NoPen);
         painter.drawRoundedRect(x, y, width, height, 4, 4);
+
+        // 绘制音高文本
+        painter.setPen(Qt::white);
+        painter.setFont(QFont("Arial", 8));
+
+        // 确保文本在矩形内居中
+        QRect textRect(x, y, width, height);
+        painter.drawText(textRect, Qt::AlignCenter, text);
     }
 }
 
 int old_Notecanvas::getNoteY(int keyIndex) const {
-    return 30 + (keyIndex % 36) * 20;
+    // 将MIDI音符编号映射到合理的高度范围
+    // MIDI音符范围0-127，映射到画布高度0-800
+    const int MIN_PITCH = 0;
+    const int MAX_PITCH = 127;
+    const int CANVAS_HEIGHT = 800;
+
+    // 反转映射，使低音在底部，高音在顶部
+    int normalizedPitch = MAX_PITCH - keyIndex;
+
+    // 计算Y位置，保留顶部和底部边距
+    return 50 + (normalizedPitch * (CANVAS_HEIGHT - 100)) / (MAX_PITCH - MIN_PITCH);
 }
 
 LoadWindow::LoadWindow(QWidget *parent) : QMainWindow(parent)
@@ -242,6 +277,7 @@ void LoadWindow::selectAudio()
         try {
             score.load(fileName.toStdString());
             qDebug() << "文件加载成功";
+            qDebug() << "音轨数量：" << score.gettracksnum();
 
             // 清空现有画布
             while (!canvases.isEmpty()) {
@@ -249,6 +285,12 @@ void LoadWindow::selectAudio()
                 stackedWidget->removeWidget(canvas);
                 delete canvas;
             }
+            trackList->clear();
+
+            // 定义音符显示参数
+            const int PIXELS_PER_QUARTER_NOTE = 50;
+            const int MIN_NOTE_WIDTH = 10;
+            const int NOTE_SPACING = 15;
 
             // 为每个音轨创建画布
             for (int i = 0; i < score.gettracksnum(); i++) {
@@ -259,16 +301,51 @@ void LoadWindow::selectAudio()
 
                 // 更新音轨列表
                 trackList->addItem(QString("音轨 %1").arg(trackList->count() + 1));
-                trackList->setCurrentRow(trackList->count() - 1);
-                currentTrackIndex = trackList->count() - 1;
-                //对该音轨进行绘制
-                Track& temp=score.gettrackbyn(i);
-                for(int u=0;u<temp.getnotesnum();u++){
-                    MidiNote* pnote=temp.getnotesbyn(u);
-                    //根据该音符的音高pitch时长duration在画布对应位置画出色块
-                    //待完成
+
+                // 获取当前音轨
+                Track& track = score.gettrackbyn(i);
+                qDebug() << "音轨" << i << "包含" << track.getnotesnum() << "个音符";
+
+                // 当前时间位置（像素）
+                int currentPosition = 0;
+
+                // 遍历音轨中的所有音符
+                for (int u = 0; u < track.getnotesnum(); u++) {
+                    MidiNote* pnote = track.getnotesbyn(u);
+
+                    // 获取音符的音高和时长
+                    int pitch = pnote->getpitch();
+                    double duration = pnote->getduration();
+
+                    // 计算音符的宽度（基于时长）
+                    int noteWidth = duration * PIXELS_PER_QUARTER_NOTE;
+                    if (noteWidth < MIN_NOTE_WIDTH) {
+                        noteWidth = MIN_NOTE_WIDTH;
+                    }
+
+                    qDebug() << "音符" << u << ": pitch=" << pitch
+                             << ", duration=" << duration
+                             << ", width=" << noteWidth
+                             << ", position=" << currentPosition;
+
+                    // 添加音符到画布
+                    newCanvas->addNote(pitch, currentPosition, noteWidth);
+
+                    // 更新当前时间位置
+                    currentPosition += noteWidth + NOTE_SPACING;
                 }
 
+                qDebug() << "音轨" << i << "总宽度:" << currentPosition;
+
+                // 强制刷新画布
+                newCanvas->update();
+                newCanvas->updateCanvasSize();
+            }
+
+            // 切换到第一个音轨
+            if (trackList->count() > 0) {
+                trackList->setCurrentRow(0);
+                currentTrackIndex = 0;
             }
 
         } catch (const std::exception& e) {

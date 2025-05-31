@@ -15,8 +15,8 @@ class old_Notecanvas : public QWidget {
     Q_OBJECT
 public:
     explicit old_Notecanvas(QWidget *parent = nullptr);
-    void setNotes(const QVector<std::tuple<int, int>>& notes);
-    void addNote(int keyIndex, int position); // 添加音符到当前画布
+    void setNotes(const QVector<std::tuple<int, int, int, QString>>& notes);
+    void addNote(int keyIndex, int position,int width); // 添加音符到当前画布
     void clearNotes(); // 清空当前画布的音符
     void updateCanvasSize(); // 更新画布大小
     int getLastNotePosition() const; // 获取最后一个音符的位置
@@ -25,7 +25,7 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
-    QVector<std::tuple<int, int>> m_notes;
+    QVector<std::tuple<int, int,int,QString>> m_notes;
     int getNoteY(int keyIndex) const;
     int lastNotePosition = 0; // 跟踪当前画布的音符位置
 };
