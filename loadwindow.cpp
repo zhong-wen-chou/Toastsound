@@ -5,8 +5,84 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <QGroupBox>
 #include <QScrollArea>
+#include <QPainter>
 
+const int NOTE_WIDTH = 20;
+const int TRACK_SPACING = 20;
+const int BASE_Y = 20;
+const QColor WHITE_KEY_COLOR = Qt::white;
+const QColor BLACK_KEY_COLOR = Qt::black;
+// old_Notecanvas 实现
+old_Notecanvas::old_Notecanvas(QWidget *parent) : QWidget(parent) {}
 
+void old_Notecanvas::setNotes(const QVector<std::tuple<int, int>>& notes) {
+    m_notes = notes;
+    update();
+}
+
+void old_Notecanvas::addNote(int keyIndex, int position) {
+    m_notes.append({keyIndex, position});
+    lastNotePosition = position + NOTE_WIDTH + 5;
+    update();
+    updateCanvasSize();
+}
+
+void old_Notecanvas::clearNotes() {
+    m_notes.clear();
+    lastNotePosition = 0;
+    update();
+}
+
+int old_Notecanvas::getLastNotePosition() const {
+    return lastNotePosition;
+}
+
+void old_Notecanvas::updateCanvasSize() {
+    if (m_notes.isEmpty()) {
+        setMinimumSize(0, 800);
+        return;
+    }
+
+    // 计算最大X坐标
+    int maxX = 0;
+    for (const auto &[keyIndex, x] : m_notes) {
+        maxX = qMax(maxX, x + NOTE_WIDTH);
+    }
+
+    // 设置画布大小
+    setMinimumSize(maxX + 100, 800);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+}
+
+void old_Notecanvas::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // 绘制背景
+    painter.fillRect(rect(), QColor("#f8f8f8"));
+
+    // 绘制音符
+    for (const auto &note : m_notes) {
+        int keyIndex = std::get<0>(note);
+        int x = std::get<1>(note);
+        int y = getNoteY(keyIndex);
+
+        QColor noteColor = (keyIndex < 28) ?
+                               QColor("#2196F3") : QColor("#888888");
+
+        int height = 20;
+        int width = (keyIndex < 28) ? 20 : 16;
+
+        painter.setBrush(noteColor);
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(x, y, width, height, 4, 4);
+    }
+}
+
+int old_Notecanvas::getNoteY(int keyIndex) const {
+    return 30 + (keyIndex % 36) * 20;
+}
 
 LoadWindow::LoadWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -169,7 +245,7 @@ void LoadWindow::selectAudio()
 
             // 清空现有画布
             while (!canvases.isEmpty()) {
-                NoteCanvas* canvas = canvases.takeLast();
+                old_Notecanvas* canvas = canvases.takeLast();
                 stackedWidget->removeWidget(canvas);
                 delete canvas;
             }
@@ -177,7 +253,7 @@ void LoadWindow::selectAudio()
             // 为每个音轨创建画布
             for (int i = 0; i < score.gettracksnum(); i++) {
                 // 创建新画布
-                NoteCanvas* newCanvas = new NoteCanvas();
+                old_Notecanvas* newCanvas = new old_Notecanvas();
                 canvases.append(newCanvas);
                 stackedWidget->addWidget(newCanvas);
 
@@ -218,7 +294,7 @@ void LoadWindow::addTrack()
     score.addTrack(Track());
 
     // 创建新画布
-    NoteCanvas* newCanvas = new NoteCanvas();
+    old_Notecanvas* newCanvas = new old_Notecanvas();
     canvases.append(newCanvas);
     stackedWidget->addWidget(newCanvas);
 
@@ -233,7 +309,7 @@ void LoadWindow::removeCurrentTrack()
     if (trackList->count() <= 1) return; // 至少保留一个音轨
 
     // 从堆栈中移除画布
-    NoteCanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
+    old_Notecanvas* canvasToRemove = canvases.takeAt(currentTrackIndex);
     stackedWidget->removeWidget(canvasToRemove);
     delete canvasToRemove;
 

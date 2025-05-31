@@ -9,8 +9,26 @@
 #include <QListWidget>
 #include <QStackedWidget>
 #include "song.h"
-#include "editwindow.h"
+//#include "editwindow.h"
 
+class old_Notecanvas : public QWidget {
+    Q_OBJECT
+public:
+    explicit old_Notecanvas(QWidget *parent = nullptr);
+    void setNotes(const QVector<std::tuple<int, int>>& notes);
+    void addNote(int keyIndex, int position); // 添加音符到当前画布
+    void clearNotes(); // 清空当前画布的音符
+    void updateCanvasSize(); // 更新画布大小
+    int getLastNotePosition() const; // 获取最后一个音符的位置
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    QVector<std::tuple<int, int>> m_notes;
+    int getNoteY(int keyIndex) const;
+    int lastNotePosition = 0; // 跟踪当前画布的音符位置
+};
 
 class LoadWindow : public QMainWindow
 {
@@ -38,7 +56,7 @@ private:
     Score score;
     QListWidget *trackList; // 音轨列表
     QStackedWidget *stackedWidget; // 堆栈窗口管理多个画布
-    QList<NoteCanvas*> canvases; // 每个音轨对应的画布
+    QList<old_Notecanvas*> canvases; // 每个音轨对应的画布
 
     // 按钮
     QPushButton *returnButton; // 返回按钮
