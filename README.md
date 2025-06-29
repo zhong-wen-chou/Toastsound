@@ -26,4 +26,4 @@
 ### 额外说明
 
 - [演示视频]()
-- [作业报告]()
+- [作业报告](https://github.com/zhong-wen-chou/Toastsound/blob/main/report.pdf)
