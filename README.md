@@ -24,5 +24,7 @@
 
 ### 额外说明
 
-- [演示视频]()
+- [演示视频](https://disk.pku.edu.cn/link/AA368CAB8DB8654684A3AD65A073DE9227
+Name: 25演示.mp4
+Expires: 2025-07-29 22:25)
 - [作业报告](https://github.com/zhong-wen-chou/Toastsound/blob/main/report.pdf)
